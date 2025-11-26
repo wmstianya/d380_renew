@@ -1,0 +1,39 @@
+# Keil MDK Output
+*.o
+*.d
+*.axf
+*.htm
+*.lnp
+*.lst
+*.map
+*.crf
+*.dep
+*.iex
+*.plg
+*.tra
+*.uvguix.*
+*.bak
+*.scvd
+
+# Output directories
+OBJ/
+Listings/
+DebugConfig/
+
+# JLink
+JLinkLog.txt
+JLinkSettings.ini
+
+# IDE settings
+*.uvoptx
+RTE/
+
+# Temporary files
+*.tmp
+*~
+Thumbs.db
+.DS_Store
+
+# OpenSpec generated files (keep specs)
+openspec/.cache/
+
