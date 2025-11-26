@@ -1,734 +1,808 @@
+/**
+ * @file    ADS1220.c
+ * @brief   ADS1220 24ä½ADCé©±åŠ¨æ¨¡å—å®ç°
+ * @author  Refactored
+ * @date    2024
+ * @version 2.0
+ * 
+ * @details é‡æ„å†…å®¹:
+ *          - DWTå‘¨æœŸè®¡æ•°å™¨ç²¾ç¡®å¾®ç§’å»¶è¿Ÿ
+ *          - ç»Ÿä¸€SPIé€šä¿¡(æ”¯æŒ4ç§æ¨¡å¼)
+ *          - å¯„å­˜å™¨è¯»-æ”¹-å†™æ¨¡å¼
+ *          - è¶…æ—¶ä¿æŠ¤æœºåˆ¶
+ */
+
 #include "stm32f10x.h"
 #include "ADS1220.h"
 
+/*============================================================================*/
+/*                              å…¨å±€è®¾å¤‡å¥æŸ„                                   */
+/*============================================================================*/
 
-ADS1220_InitType ADS1220_Init =
-{
-	{GPIOE,GPIOE,GPIOE,GPIOE,GPIOE},
-	{GPIO_Pin_11,GPIO_Pin_12,GPIO_Pin_15,GPIO_Pin_14,GPIO_Pin_13}
+Ads1220Handle_t ads1220Handle = {
+    .port = {GPIOE, GPIOE, GPIOE, GPIOE, GPIOE},
+    .pin = {GPIO_Pin_11, GPIO_Pin_12, GPIO_Pin_15, GPIO_Pin_14, GPIO_Pin_13},
+    .spiMode = ADS1220_SPI_MODE1,  /* é»˜è®¤MODE1 (CPOL=0, CPHA=1) */
+    .spiDelayUs = ADS1220_SPI_DELAY_US,
+    .regCache = {0, 0, 0, 0},
+    .isInitialized = 0
 };
 
-#define ADS1220_CS_H GPIO_WriteBit(ADS1220_Init.port[ADS1220_CS],ADS1220_Init.pin[ADS1220_CS],Bit_SET)
-#define ADS1220_CS_L GPIO_WriteBit(ADS1220_Init.port[ADS1220_CS],ADS1220_Init.pin[ADS1220_CS],Bit_RESET)
+/*============================================================================*/
+/*                              DWTå¯„å­˜å™¨å®šä¹‰                                  */
+/*============================================================================*/
 
-#define ADS1220_CLK_H GPIO_WriteBit(ADS1220_Init.port[ADS1220_SCLK],ADS1220_Init.pin[ADS1220_SCLK],Bit_SET)
-#define ADS1220_CLK_L GPIO_WriteBit(ADS1220_Init.port[ADS1220_SCLK],ADS1220_Init.pin[ADS1220_SCLK],Bit_RESET)
+#define DWT_CTRL    (*(volatile uint32_t*)0xE0001000)
+#define DWT_CYCCNT  (*(volatile uint32_t*)0xE0001004)
+#define DEM_CR      (*(volatile uint32_t*)0xE000EDFC)
 
+#define DEM_CR_TRCENA       (1 << 24)
+#define DWT_CTRL_CYCCNTENA  (1 << 0)
 
-#define ADS1220_DIN_H GPIO_WriteBit(ADS1220_Init.port[ADS1220_DIN],ADS1220_Init.pin[ADS1220_DIN],Bit_SET)
-#define ADS1220_DIN_L GPIO_WriteBit(ADS1220_Init.port[ADS1220_DIN],ADS1220_Init.pin[ADS1220_DIN],Bit_RESET)
+static uint8_t dwtInitialized = 0;
 
+/*============================================================================*/
+/*                              å¤–éƒ¨æ—¶é—´å‡½æ•°                                   */
+/*============================================================================*/
 
-#define ADS1200_DOUT GPIO_ReadInputDataBit(GPIOE,ADS1220_Init.pin[ADS1220_DOUT])
+extern volatile uint32_t sysTickCount;
 
-#define ADS1200_DRDY GPIO_ReadInputDataBit(GPIOE,ADS1220_Init.pin[ADS1220_DRDY])
+static uint32_t ads1220GetTickMs(void)
+{
+    return sysTickCount;
+}
 
-
-
+/*============================================================================*/
+/*                              DWTå»¶è¿Ÿå®ç°                                    */
+/*============================================================================*/
 
 /**
-  * @brief ADS1220Init(void) ads1220³õÊ¼»¯
-  * @param none
-  * @retval none
-  */
+ * @brief  åˆå§‹åŒ–DWTå‘¨æœŸè®¡æ•°å™¨
+ */
+void ads1220DwtInit(void)
+{
+    if (dwtInitialized)
+        return;
+    
+    DEM_CR |= DEM_CR_TRCENA;        /* ä½¿èƒ½DWTæ¨¡å— */
+    DWT_CYCCNT = 0;                 /* æ¸…é›¶è®¡æ•°å™¨ */
+    DWT_CTRL |= DWT_CTRL_CYCCNTENA; /* ä½¿èƒ½å‘¨æœŸè®¡æ•°å™¨ */
+    
+    dwtInitialized = 1;
+}
+
+/**
+ * @brief  DWTå¾®ç§’å»¶è¿Ÿ
+ * @param  us: å»¶è¿Ÿå¾®ç§’æ•°
+ * @note   72MHzä¸»é¢‘: 1us = 72 cycles
+ */
+void ads1220DwtDelayUs(uint32_t us)
+{
+    uint32_t startCycle;
+    uint32_t delayCycle;
+    
+    if (!dwtInitialized)
+        ads1220DwtInit();
+    
+    startCycle = DWT_CYCCNT;
+    delayCycle = us * (SystemCoreClock / 1000000);
+    
+    while ((DWT_CYCCNT - startCycle) < delayCycle)
+    {
+        /* ç©ºç­‰å¾… */
+    }
+}
+
+/*============================================================================*/
+/*                              ç»Ÿä¸€SPIé€šä¿¡                                    */
+/*============================================================================*/
+
+/**
+ * @brief  SPIå‘é€å•å­—èŠ‚(æ”¯æŒ4ç§æ¨¡å¼)
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ * @param  data: å‘é€æ•°æ®
+ */
+static void spiSendByte(Ads1220Handle_t* handle, uint8_t data)
+{
+    uint8_t i;
+    uint8_t cpol = (handle->spiMode >> 1) & 0x01;
+    uint8_t cpha = handle->spiMode & 0x01;
+    
+    /* è®¾ç½®ç©ºé—²ç”µå¹³ */
+    if (cpol)
+        GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_SET);
+    else
+        GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_RESET);
+    
+    for (i = 0; i < 8; i++)
+    {
+        if (cpha == 0)
+        {
+            /* MODE 0/2: æ•°æ®åœ¨ç¬¬ä¸€ä¸ªè¾¹æ²¿é”å­˜ */
+            if (data & 0x80)
+                GPIO_WriteBit(handle->port[ADS1220_DIN], handle->pin[ADS1220_DIN], Bit_SET);
+            else
+                GPIO_WriteBit(handle->port[ADS1220_DIN], handle->pin[ADS1220_DIN], Bit_RESET);
+            
+            ads1220DwtDelayUs(handle->spiDelayUs);
+            
+            /* ç¬¬ä¸€ä¸ªè¾¹æ²¿ */
+            if (cpol)
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_RESET);
+            else
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_SET);
+            
+            ads1220DwtDelayUs(handle->spiDelayUs);
+            
+            /* ç¬¬äºŒä¸ªè¾¹æ²¿ */
+            if (cpol)
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_SET);
+            else
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_RESET);
+        }
+        else
+        {
+            /* MODE 1/3: æ•°æ®åœ¨ç¬¬äºŒä¸ªè¾¹æ²¿é”å­˜ */
+            /* ç¬¬ä¸€ä¸ªè¾¹æ²¿ */
+            if (cpol)
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_RESET);
+            else
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_SET);
+            
+            if (data & 0x80)
+                GPIO_WriteBit(handle->port[ADS1220_DIN], handle->pin[ADS1220_DIN], Bit_SET);
+            else
+                GPIO_WriteBit(handle->port[ADS1220_DIN], handle->pin[ADS1220_DIN], Bit_RESET);
+            
+            ads1220DwtDelayUs(handle->spiDelayUs);
+            
+            /* ç¬¬äºŒä¸ªè¾¹æ²¿ */
+            if (cpol)
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_SET);
+            else
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_RESET);
+            
+            ads1220DwtDelayUs(handle->spiDelayUs);
+        }
+        data <<= 1;
+    }
+}
+
+/**
+ * @brief  SPIæ¥æ”¶å•å­—èŠ‚(æ”¯æŒ4ç§æ¨¡å¼)
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ * @return æ¥æ”¶æ•°æ®
+ */
+static uint8_t spiReceiveByte(Ads1220Handle_t* handle)
+{
+    uint8_t i;
+    uint8_t data = 0;
+    uint8_t cpol = (handle->spiMode >> 1) & 0x01;
+    uint8_t cpha = handle->spiMode & 0x01;
+    
+    for (i = 0; i < 8; i++)
+    {
+        data <<= 1;
+        
+        if (cpha == 0)
+        {
+            /* MODE 0/2 */
+            if (cpol)
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_RESET);
+            else
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_SET);
+            
+            ads1220DwtDelayUs(handle->spiDelayUs);
+            
+            if (GPIO_ReadInputDataBit(handle->port[ADS1220_DOUT], handle->pin[ADS1220_DOUT]))
+                data |= 0x01;
+            
+            if (cpol)
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_SET);
+            else
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_RESET);
+            
+            ads1220DwtDelayUs(handle->spiDelayUs);
+        }
+        else
+        {
+            /* MODE 1/3 */
+            if (cpol)
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_RESET);
+            else
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_SET);
+            
+            ads1220DwtDelayUs(handle->spiDelayUs);
+            
+            if (cpol)
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_SET);
+            else
+                GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_RESET);
+            
+            if (GPIO_ReadInputDataBit(handle->port[ADS1220_DOUT], handle->pin[ADS1220_DOUT]))
+                data |= 0x01;
+            
+            ads1220DwtDelayUs(handle->spiDelayUs);
+        }
+    }
+    
+    return data;
+}
+
+/**
+ * @brief  CSå¼•è„šæ§åˆ¶
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ * @param  state: ADS1220_ENABLE/ADS1220_DISABLE
+ */
+static void spiCsControl(Ads1220Handle_t* handle, uint8_t state)
+{
+    if (state == ADS1220_ENABLE)
+        GPIO_WriteBit(handle->port[ADS1220_CS], handle->pin[ADS1220_CS], Bit_RESET);
+    else
+        GPIO_WriteBit(handle->port[ADS1220_CS], handle->pin[ADS1220_CS], Bit_SET);
+}
+
+/*============================================================================*/
+/*                              æ–°APIå®ç°                                      */
+/*============================================================================*/
+
+/**
+ * @brief  è®¾ç½®SPIæ¨¡å¼
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ * @param  mode: SPIæ¨¡å¼(0-3)
+ */
+void ads1220SetSpiMode(Ads1220Handle_t* handle, uint8_t mode)
+{
+    if (mode <= 3)
+    {
+        handle->spiMode = mode;
+    }
+}
+
+/**
+ * @brief  ç¡¬ä»¶åˆå§‹åŒ–
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ */
+void ads1220HwInit(Ads1220Handle_t* handle)
+{
+    uint8_t i;
+    GPIO_InitTypeDef GPIO_InitStructure;
+    
+    /* åˆå§‹åŒ–DWT */
+    ads1220DwtInit();
+    
+    /* ä½¿èƒ½GPIOæ—¶é’Ÿ */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOE, ENABLE);
+    
+    /* é…ç½®è¾“å‡ºå¼•è„š: CS, SCLK, DIN */
+    for (i = 0; i < 3; i++)
+    {
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
+        GPIO_InitStructure.GPIO_Pin = handle->pin[i];
+        GPIO_Init(handle->port[i], &GPIO_InitStructure);
+    }
+    
+    /* é…ç½®è¾“å…¥å¼•è„š: DOUT, DRDY */
+    for (i = 3; i < 5; i++)
+    {
+        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+        GPIO_InitStructure.GPIO_Pin = handle->pin[i];
+        GPIO_Init(handle->port[i], &GPIO_InitStructure);
+    }
+    
+    /* é»˜è®¤çŠ¶æ€: CSé«˜, CLKä½ */
+    GPIO_WriteBit(handle->port[ADS1220_CS], handle->pin[ADS1220_CS], Bit_SET);
+    GPIO_WriteBit(handle->port[ADS1220_SCLK], handle->pin[ADS1220_SCLK], Bit_RESET);
+    
+    handle->isInitialized = 1;
+}
+
+/**
+ * @brief  ç¡¬ä»¶é…ç½®
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ */
+void ads1220HwConfig(Ads1220Handle_t* handle)
+{
+    unsigned temp;
+    
+    /* REG0: AIN1-AIN0, GAIN=16 */
+    temp = ADS1220_MUX_1_0 | ADS1220_GAIN_16;
+    ADS1220WriteRegister(ADS1220_REG0, 1, &temp);
+    handle->regCache[0] = (uint8_t)temp;
+    
+    /* REG1: è¿ç»­è½¬æ¢ */
+    temp = ADS1220_CC;
+    ADS1220WriteRegister(ADS1220_REG1, 1, &temp);
+    handle->regCache[1] = (uint8_t)temp;
+    
+    /* REG2: å¤–éƒ¨å‚è€ƒ, 50/60Hzæ»¤æ³¢, IDAC=500uA */
+    temp = ADS1220_IDAC_500 | 0x50;
+    ADS1220WriteRegister(ADS1220_REG2, 1, &temp);
+    handle->regCache[2] = (uint8_t)temp;
+    
+    /* REG3: IDAC1->AIN2, IDAC2->AIN3 */
+    temp = ADS1220_IDAC1_AIN2 | ADS1220_IDAC2_AIN3;
+    ADS1220WriteRegister(ADS1220_REG3, 1, &temp);
+    handle->regCache[3] = (uint8_t)temp;
+}
+
+/**
+ * @brief  ç­‰å¾…æ•°æ®å°±ç»ª(å¸¦è¶…æ—¶)
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ * @param  timeoutMs: è¶…æ—¶æ—¶é—´(ms)
+ * @return çŠ¶æ€ç 
+ */
+Ads1220Status_e ads1220WaitDataReady(Ads1220Handle_t* handle, uint32_t timeoutMs)
+{
+    uint32_t startTick = ads1220GetTickMs();
+    
+    while (GPIO_ReadInputDataBit(handle->port[ADS1220_DRDY], handle->pin[ADS1220_DRDY]) != 0)
+    {
+        if ((ads1220GetTickMs() - startTick) > timeoutMs)
+        {
+            return ADS1220_ERR_TIMEOUT;
+        }
+    }
+    
+    return ADS1220_OK;
+}
+
+/**
+ * @brief  å®‰å…¨è¯»å–æ•°æ®(å¸¦è¶…æ—¶)
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ * @param  data: è¾“å‡ºæ•°æ®æŒ‡é’ˆ
+ * @param  timeoutMs: è¶…æ—¶æ—¶é—´(ms)
+ * @return çŠ¶æ€ç 
+ */
+Ads1220Status_e ads1220ReadDataSafe(Ads1220Handle_t* handle, int32_t* data, uint32_t timeoutMs)
+{
+    Ads1220Status_e status;
+    
+    status = ads1220WaitDataReady(handle, timeoutMs);
+    if (status != ADS1220_OK)
+    {
+        return status;
+    }
+    
+    *data = ADS1220ReadData();
+    
+    return ADS1220_OK;
+}
+
+/**
+ * @brief  åŒæ­¥å¯„å­˜å™¨ç¼“å­˜
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ */
+void ads1220SyncRegCache(Ads1220Handle_t* handle)
+{
+    unsigned temp;
+    uint8_t i;
+    
+    for (i = 0; i < 4; i++)
+    {
+        ADS1220ReadRegister(i, 1, &temp);
+        handle->regCache[i] = (uint8_t)temp;
+    }
+}
+
+/**
+ * @brief  è®¾ç½®å¯„å­˜å™¨ä½åŸŸ(è¯»-æ”¹-å†™æ¨¡å¼)
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ * @param  reg: å¯„å­˜å™¨ç´¢å¼•(0-3)
+ * @param  mask: ä½æ©ç 
+ * @param  value: æ–°å€¼
+ * @return çŠ¶æ€ç 
+ */
+Ads1220Status_e ads1220SetRegBits(Ads1220Handle_t* handle, uint8_t reg, uint8_t mask, uint8_t value)
+{
+    unsigned temp;
+    
+    if (reg > 3)
+    {
+        return ADS1220_ERR_PARAM;
+    }
+    
+    /* è¯»å–å½“å‰å€¼ */
+    ADS1220ReadRegister(reg, 1, &temp);
+    
+    /* ä¿®æ”¹æŒ‡å®šä½ */
+    temp = (temp & ~mask) | (value & mask);
+    
+    /* å†™å› */
+    ADS1220WriteRegister(reg, 1, &temp);
+    
+    /* æ›´æ–°ç¼“å­˜ */
+    handle->regCache[reg] = (uint8_t)temp;
+    
+    return ADS1220_OK;
+}
+
+/**
+ * @brief  è·å–å¯„å­˜å™¨ä½åŸŸ
+ * @param  handle: è®¾å¤‡å¥æŸ„
+ * @param  reg: å¯„å­˜å™¨ç´¢å¼•
+ * @param  mask: ä½æ©ç 
+ * @param  value: è¾“å‡ºå€¼æŒ‡é’ˆ
+ * @return çŠ¶æ€ç 
+ */
+Ads1220Status_e ads1220GetRegBits(Ads1220Handle_t* handle, uint8_t reg, uint8_t mask, uint8_t* value)
+{
+    unsigned temp;
+    
+    if (reg > 3)
+    {
+        return ADS1220_ERR_PARAM;
+    }
+    
+    ADS1220ReadRegister(reg, 1, &temp);
+    *value = (uint8_t)(temp & mask);
+    
+    return ADS1220_OK;
+}
+
+/*============================================================================*/
+/*                              ä¾¿æ·é…ç½®å‡½æ•°                                   */
+/*============================================================================*/
+
+Ads1220Status_e ads1220SetMux(Ads1220Handle_t* handle, uint8_t mux)
+{
+    return ads1220SetRegBits(handle, ADS1220_REG0, ADS1220_REG0_MUX_MASK, mux);
+}
+
+Ads1220Status_e ads1220SetGainValue(Ads1220Handle_t* handle, Ads1220Gain_e gain)
+{
+    return ads1220SetRegBits(handle, ADS1220_REG0, ADS1220_REG0_GAIN_MASK, (uint8_t)gain);
+}
+
+Ads1220Status_e ads1220SetDataRateValue(Ads1220Handle_t* handle, uint8_t dr)
+{
+    return ads1220SetRegBits(handle, ADS1220_REG1, ADS1220_REG1_DR_MASK, dr);
+}
+
+Ads1220Status_e ads1220SetPgaBypass(Ads1220Handle_t* handle, uint8_t bypass)
+{
+    return ads1220SetRegBits(handle, ADS1220_REG0, ADS1220_REG0_PGA_MASK, bypass ? 0x01 : 0x00);
+}
+
+Ads1220Status_e ads1220SetVref(Ads1220Handle_t* handle, uint8_t vref)
+{
+    return ads1220SetRegBits(handle, ADS1220_REG2, ADS1220_REG2_VREF_MASK, vref);
+}
+
+Ads1220Status_e ads1220SetIdac(Ads1220Handle_t* handle, uint8_t idac)
+{
+    return ads1220SetRegBits(handle, ADS1220_REG2, ADS1220_REG2_IDAC_MASK, idac);
+}
+
+/*============================================================================*/
+/*                              å…¼å®¹æ—§APIå®ç°                                  */
+/*============================================================================*/
+
+/**
+ * @brief  åˆå§‹åŒ–(å…¼å®¹æ—§API)
+ */
 void ADS1220Init(void)
 {
-	uint8_t i = 0;
-  GPIO_InitTypeDef GPIO_InitStructure;
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOE, ENABLE);
-  for(i=0;i<3;i++)
-  {
-	  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;   //ÍÆÀ­Êä³ö
-      GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;		
-	  GPIO_InitStructure.GPIO_Pin = ADS1220_Init.pin[i]; 
-	  GPIO_Init(GPIOE, &GPIO_InitStructure);
-  }
-  for(i=3;i<5;i++)
-  {
-	  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;   //ÍÆÀ­Êä³ö	
-	  GPIO_InitStructure.GPIO_Pin = ADS1220_Init.pin[i]; 
-	  GPIO_Init(GPIOE, &GPIO_InitStructure);
-  }
-  ADS1220_CS_H;
-  ADS1220_CLK_L;  
-  return;
-}
-/**
-  * @brief ADS1220Init(void) ads1220³õÊ¼»¯
-  * @param none
-  * @retval none
-  */
-void ADS1220Config(void)
-{
-	  unsigned Temp;
-	  /* AIN1 P AIN0 N ·Å´ó±¶Êı8*/
-    Temp = ADS1220_MUX_1_0 | ADS1220_GAIN_16 ;
-    ADS1220WriteRegister(ADS1220_0_REGISTER, 0x01, &Temp);
-    /*Á¬Ğø×ª»»*/
-    Temp = ADS1220_CC ;
-    ADS1220WriteRegister(ADS1220_1_REGISTER, 0x01, &Temp);
-    
-    /*Ê¹ÓÃ×¨ÓÃ REFP0 ºÍ REFN0 ÊäÈëÑ¡ÔñµÄÍâ²¿»ù×¼µçÑ¹ Í¬Ê±ÒÖÖÆ 50Hz ºÍ 60Hz 500ua*/
-    Temp = ADS1220_IDAC_500 | 0x50 ;
-	  ADS1220WriteRegister(ADS1220_2_REGISTER, 0x01, &Temp);
-    
-    Temp = ADS1220_IDAC1_AIN2 | ADS1220_IDAC2_AIN3  ;
-	  ADS1220WriteRegister(ADS1220_3_REGISTER, 0x01, &Temp);
-       	
+    ads1220HwInit(&ads1220Handle);
 }
 
 /**
-  * @brief  Delay_us(uint16_t Value) 1us
-  * @param ÑÓÊ±usº¯Êı
-  * @retval int
-  */
-static void Delay_us(uint16_t Value)
-{
-	uint8_t i=0;
-  while(Value--)
-	{ 
-		for(i=0;i<20;i++)
-		{
-			 __NOP;
-		}
-	}
-}
-/**
-  * @brief int ADS1220WaitForDataReady(int Timeout)³õÊ¼»¯
-  * @param none
-  * @retval none
-  */
+ * @brief  ç­‰å¾…æ•°æ®å°±ç»ª(å…¼å®¹æ—§API,å·²ä¿®å¤æ·»åŠ è¶…æ—¶)
+ * @param  Timeout: è¶…æ—¶æ—¶é—´(ms), 0è¡¨ç¤ºä½¿ç”¨é»˜è®¤å€¼
+ * @return çŠ¶æ€ç 
+ */
 int ADS1220WaitForDataReady(int Timeout)
 {
-
-   return ADS1220_NO_ERROR;
+    uint32_t timeoutMs = (Timeout > 0) ? (uint32_t)Timeout : ADS1220_TIMEOUT_DEFAULT;
+    
+    return (int)ads1220WaitDataReady(&ads1220Handle, timeoutMs);
 }
+
 /**
-  * @brief  ADS1220CsStatus(uint8_t state);
-  * @param state :ADS1220_DISABLE / ADS1220_ENABLE
-  * @retval none
-  */
-void ADS1220CsStatus( uint8_t state)
+ * @brief  CSæ§åˆ¶(å…¼å®¹æ—§API)
+ */
+void ADS1220CsStatus(uint8_t state)
 {
-  switch(state)
-  {
-	  case ADS1220_DISABLE:
-		ADS1220_CS_H;
-	  break;
-	  case ADS1220_ENABLE:
-		ADS1220_CS_L;
-	  break;
-  }
+    spiCsControl(&ads1220Handle, state);
 }
 
-
-#if CPOL==0&&CPHA==0          //MODE   0  0   
 /**
-  * @brief  SPI_Send_Data(uint8_t sendData) //MODE   0  0 
-  * @param  sendData :·¢ËÍÊı¾İ
-  * @retval none
-  */
-void SPI_Send_Data(uint8_t sendData)
+ * @brief  å‘é€å­—èŠ‚(å…¼å®¹æ—§API)
+ */
+void ADS1220SendByte(unsigned char cData)
 {
-	uint8_t n =0 ;
-	for(n=0;n<8;n++)
-	{
-		ADS1220_CLK_L;
-		Delay_us(20);
-		if(sendData & 0x80)
-			ADS1220_DIN_H;
-		else 
-			ADS1220_DIN_L;
-		Delay_us(20);
-		sendData <<= 1 ;
-		ADS1220_CLK_H;
-		Delay_us(20);
-	}
-	ADS1220_CLK_L;
+    spiSendByte(&ads1220Handle, cData);
 }
 
 /**
-  * @brief  uint8_t SPI_Receiver_Data(void)
-  * @param  none
-  * @retval ½ÓÊÕ8Î»Êı¾İ
-  */
-uint8_t SPI_Receiver_Data(void)
+ * @brief  æ¥æ”¶å­—èŠ‚(å…¼å®¹æ—§API)
+ */
+unsigned char ADS1220ReceiveByte(void)
 {
-	uint8_t n = 0;
-	uint8_t revData = 0;
-	for(n=0;n<8;n++)
-	{
-		ADS1220_CLK_L;
-		Delay_us(20);
-		revData <<=1;
-		if(ADS1200_DOUT)
-			revData |= 0x01;
-		else 
-			revData &= 0xfe;
-		Delay_us(20);
-		ADS1220_CLK_H;
-		Delay_us(20);
-	}
-	ADS1220_CLK_L;
-	return revData;
-}
-#endif
-
-
-
-
-
-#if CPOL==0&&CPHA==1           //MODE  0  1
-/**
-  * @brief  SPI_Send_Data(uint8_t sendData) //MODE   0 1
-  * @param  sendData :·¢ËÍÊı¾İ
-  * @retval none
-  */
-void SPI_Send_Data(uint8_t sendData)
-{
- uint8_t n;
- ADS1220_CLK_L;
- for(n=0;n<8;n++)
- {
-  ADS1220_CLK_H;
-	Delay_us(5);
-  if(sendData&0x80)
-	  ADS1220_DIN_H;
-  else 
-	  ADS1220_DIN_L;
-	Delay_us(5);
-  sendData <<= 1;
-  ADS1220_CLK_L;
-	Delay_us(5);
- }
-}
-/**
-  * @brief  uint8_t SPI_Receiver_Data(void) Ä£Ê½1
-  * @param  none
-  * @retval ½ÓÊÕ8Î»Êı¾İ
-  */
-uint8_t SPI_Receiver_Data(void)
-{
- uint8_t n = 0;
- uint8_t revData = 0;
- for(n=0;n<8;n++)
- {
-  ADS1220_CLK_H;
-	Delay_us(5);
-   revData<<=1;
-  if(ADS1200_DOUT)
-	  revData |=0x01;
-  else 
-	  revData &=0xfe;
-	Delay_us(5);
-  ADS1220_CLK_L;
-	Delay_us(5);
- }
-  ADS1220_CLK_L;
-  return revData;
-}
-#endif
-/**********************************************
-Ä£Ê½¶ş           Ğ´Êı¾İ
-***********************************************/
-#if CPOL==1&&CPHA==0           //MODE   1  0
-/**
-  * @brief  SPI_Send_Data(uint8_t sendData) //MODE   1 0
-  * @param  sendData :·¢ËÍÊı¾İ
-  * @retval none
-  */
-void SPI_Send_Data(uint8_t sendData)
-{
- uint8_t n;
- for(n=0;n<8;n++)
- {
-  ADS1220_CLK_H;
-  Delay_us(5);
-  if(sendData & 0x80)
-	  ADS1220_DIN_H;
-  else 
-	  ADS1220_DIN_L;
-  Delay_us(5);
-  sendData <<=1;
-  ADS1220_CLK_L;
-  Delay_us(5);
- }
-  ADS1220_CLK_H;
-}
-/**
-  * @brief  uint8_t SPI_Receiver_Data(void) Ä£Ê½2
-  * @param  none
-  * @retval ½ÓÊÕ8Î»Êı¾İ
-  */
-uint8_t SPI_Receiver_Data(void)
-{
- uint8_t n = 0;
- uint8_t revData = 0;
- for(n=0;n<8;n++)
- {
-  ADS1220_CLK_H;
-	Delay_us(5);
-  revData <<=1;
-  if(ADS1200_DOUT)
-	  revData|=0x01;
-  else 
-	  revData&=0xfe;
-		
-  ADS1220_CLK_L;
-	Delay_us(5);
- }
-  ADS1220_CLK_H;
-  return revData;
+    return spiReceiveByte(&ads1220Handle);
 }
 
-#endif
-
-/*********************************************
-Ä£Ê½Èı        Ğ´Êı¾İ
-*********************************************/
-#if CPOL==1&&CPHA==1            //MODE  1  1
 /**
-  * @brief  SPI_Send_Data(uint8_t sendData) //MODE   1 1
-  * @param  sendData :·¢ËÍÊı¾İ
-  * @retval none
-  */
-void SPI_Send_Data(uint8_t sendData)
-{
-	uint8_t n;
-	
-	ADS1220_CLK_H;
-	for(n=0;n<8;n++)
-	{
-		ADS1220_CLK_L;
-		Delay_us(5);
-		if(sendData & 0x80)
-			ADS1220_DIN_H;
-		else 
-			ADS1220_DIN_L;
-			Delay_us(5);
-		sendData <<= 1;
-		ADS1220_CLK_H;
-		Delay_us(5);
-	}
-}
-/**
-  * @brief  uint8_t SPI_Receiver_Data(void) Ä£Ê½3
-  * @param  none
-  * @retval ½ÓÊÕ8Î»Êı¾İ
-  */
-uint8_t SPI_Receiver_Data(void)
-{
- uint8_t n = 0;
- uint8_t revData = 0;
- ADS1220_CLK_L;
- for(n=0;n<8;n++)
- { 
-	ADS1220_CLK_L;
-	Delay_us(5);
-	revData <<= 1;
-	if(ADS1200_DOUT)
-		revData |=0x01;
-	else 
-	  revData &=0xfe;
-		Delay_us(5);
-	ADS1220_CLK_H;
-	Delay_us(5);
- }
-	ADS1220_CLK_H;
-	return revData;
-}
-#endif
-/**
-  * @brief  void ADS1220SendByte(uint8_t Byte)
-  * @param  uint8_t ·¢ËÍ8Î»Êı¾İ
-  * @retval none
-  */
-void ADS1220SendByte(uint8_t Byte)
-{	
-	SPI_Send_Data(Byte);
-}
-/**
-  * @brief  ADS1220ReceiveByte(void)
-  * @param  none
-  * @retval ½ÓÊÕ8Î»Êı¾İ
-  */
-uint8_t ADS1220ReceiveByte(void)
-{
-   return SPI_Receiver_Data();
-}
-/**
-  * @brief  ADS1220ReadData(void)
-  * @param  none
-  * @retval ½ÓÊÕ32Î»Êı¾İ
-  */
+ * @brief  è¯»å–è½¬æ¢æ•°æ®
+ * @return 24ä½æœ‰ç¬¦å·æ•°æ®
+ */
 long ADS1220ReadData(void)
 {
-   long Data;
-   /* assert CS to start transfer */
-   ADS1220CsStatus(ADS1220_ENABLE);
-   /* send the command byte */
-   ADS1220SendByte(ADS1220_CMD_RDATA);
-   /* get the conversion result */
+    long Data;
+    
+    spiCsControl(&ads1220Handle, ADS1220_ENABLE);
+    spiSendByte(&ads1220Handle, ADS1220_CMD_RDATA);
+    
+    Data = spiReceiveByte(&ads1220Handle);
+    Data = (Data << 8) | spiReceiveByte(&ads1220Handle);
+    Data = (Data << 8) | spiReceiveByte(&ads1220Handle);
+    
+    /* ç¬¦å·æ‰©å±• */
+    if (Data & 0x800000)
+        Data |= 0xFF000000;
+    
+    spiCsControl(&ads1220Handle, ADS1220_DISABLE);
+    
+    return Data;
+}
 
-   Data = ADS1220ReceiveByte();
-   Data = (Data << 8) | ADS1220ReceiveByte();
-   Data = (Data << 8) | ADS1220ReceiveByte();
-   /* sign extend data */
-   if (Data & 0x800000)
-      Data |= 0xff000000; 
+/**
+ * @brief  è¯»å–å¯„å­˜å™¨
+ */
+void ADS1220ReadRegister(int StartAddress, int NumRegs, unsigned* pData)
+{
+    int i;
+    
+    spiCsControl(&ads1220Handle, ADS1220_ENABLE);
+    spiSendByte(&ads1220Handle, ADS1220_CMD_RREG | (((StartAddress << 2) & 0x0C) | ((NumRegs - 1) & 0x03)));
+    
+    for (i = 0; i < NumRegs; i++)
+    {
+        *pData++ = spiReceiveByte(&ads1220Handle);
+    }
+    
+    spiCsControl(&ads1220Handle, ADS1220_DISABLE);
+}
 
-   /* de-assert CS */
-   ADS1220CsStatus(ADS1220_DISABLE);
-   return Data;
-}
 /**
-  * @brief  void ADS1220ReadRegister(int StartAddress, int NumRegs, unsigned * pData) ¶Á¼Ä´æÆ÷
-  * @param  StartAddress:¿ªÊ¼µØÖ· 0-3 
-	* @param  NumRegs ¼Ä´æÆ÷ÊıÁ¿×î´ó3
-  * @param  pData :Òª¶Áµ½µÄÊı¾İ
-  * @retval ½ÓÊÕ32Î»Êı¾İ
-  */
-void ADS1220ReadRegister(int StartAddress, int NumRegs, unsigned * pData)
+ * @brief  å†™å…¥å¯„å­˜å™¨
+ */
+void ADS1220WriteRegister(int StartAddress, int NumRegs, unsigned* pData)
 {
-   int i;
-	/* assert CS to start transfer */
-	ADS1220CsStatus(ADS1220_ENABLE);
- 	/* send the command byte */
-	ADS1220SendByte(ADS1220_CMD_RREG | (((StartAddress<<2) & 0x0c) |((NumRegs-1)&0x03)));
-   	/* get the register content */
-	for (i=0; i< NumRegs; i++)
-	{
-		*pData++ = ADS1220ReceiveByte();
-	}
-   	/* de-assert CS */
-	ADS1220CsStatus(ADS1220_DISABLE);
-	return;
+    int i;
+    
+    spiCsControl(&ads1220Handle, ADS1220_ENABLE);
+    spiSendByte(&ads1220Handle, ADS1220_CMD_WREG | (((StartAddress << 2) & 0x0C) | ((NumRegs - 1) & 0x03)));
+    
+    for (i = 0; i < NumRegs; i++)
+    {
+        spiSendByte(&ads1220Handle, *pData++);
+    }
+    
+    spiCsControl(&ads1220Handle, ADS1220_DISABLE);
 }
+
 /**
-  * @brief  void ADS1220ReadRegister(int StartAddress, int NumRegs, unsigned * pData) Ğ´¼Ä´æÆ÷
-  * @param  StartAddress:¿ªÊ¼µØÖ· 0-3 
-	* @param  NumRegs ¼Ä´æÆ÷ÊıÁ¿×î´ó3
-  * @param  pData :Òª¶Áµ½µÄÊı¾İ
-  * @retval ½ÓÊÕ32Î»Êı¾İ
-  */
-void ADS1220WriteRegister(int StartAddress, int NumRegs, unsigned * pData)
-{
-	int i;
-   	/* assert CS to start transfer */
-	ADS1220CsStatus(ADS1220_ENABLE);
-   	/* send the command byte */
-	ADS1220SendByte(ADS1220_CMD_WREG | (((StartAddress<<2) & 0x0c) |((NumRegs-1)&0x03)));
-    /* send the data bytes */
-	for (i=0; i< NumRegs; i++)
-	{
-		ADS1220SendByte(*pData++);
-	}
-   	/* de-assert CS */
-	ADS1220CsStatus(ADS1220_DISABLE);
-   	return;
-}
-/**
-  * @brief  ADS1220SendResetCommand(void)ÖØÆôÃüÁî
-  * @param  none
-  * @retval none
-  */
+ * @brief  å‘é€å¤ä½å‘½ä»¤
+ */
 void ADS1220SendResetCommand(void)
 {
-	/* assert CS to start transfer */
-	ADS1220CsStatus(ADS1220_ENABLE);
-   	/* send the command byte */
-	ADS1220SendByte(ADS1220_CMD_RESET);
-   	/* de-assert CS */
-	ADS1220CsStatus(ADS1220_DISABLE);
-   	return;
+    spiCsControl(&ads1220Handle, ADS1220_ENABLE);
+    spiSendByte(&ads1220Handle, ADS1220_CMD_RESET);
+    spiCsControl(&ads1220Handle, ADS1220_DISABLE);
 }
+
 /**
-  * @brief  ADS1220SendStartCommand(void)Æô¶¯»òÖØÆô×ª»»
-  * @param  none
-  * @retval none
-  */
+ * @brief  å‘é€å¯åŠ¨/åŒæ­¥å‘½ä»¤
+ */
 void ADS1220SendStartCommand(void)
 {
-	/* assert CS to start transfer */
-	ADS1220CsStatus(ADS1220_ENABLE);
-    /* send the command byte */
-	ADS1220SendByte(ADS1220_CMD_SYNC);
-   	/* de-assert CS */
-	ADS1220CsStatus(ADS1220_DISABLE);
-    return;
+    spiCsControl(&ads1220Handle, ADS1220_ENABLE);
+    spiSendByte(&ads1220Handle, ADS1220_CMD_SYNC);
+    spiCsControl(&ads1220Handle, ADS1220_DISABLE);
 }
+
 /**
-  * @brief  ADS1220SendShutdownCommand(void)½øÈëµôµçÄ£Ê½ 
-  * @param  none
-  * @retval none
-  */
+ * @brief  å‘é€å…³æœºå‘½ä»¤
+ */
 void ADS1220SendShutdownCommand(void)
 {
-	/* assert CS to start transfer */
-	ADS1220CsStatus(ADS1220_ENABLE);
-   	/* send the command byte */
-	ADS1220SendByte(ADS1220_CMD_SHUTDOWN);
-   	/* de-assert CS */
-	ADS1220CsStatus(ADS1220_DISABLE);
-    return;
+    spiCsControl(&ads1220Handle, ADS1220_ENABLE);
+    spiSendByte(&ads1220Handle, ADS1220_CMD_SHUTDOWN);
+    spiCsControl(&ads1220Handle, ADS1220_DISABLE);
 }
+
 /**
-  * @brief  int ADS1220SetChannel(int Mux)
-  * @param  Mux ÒªÉèÖÃµÄÍ¨µÀ
-  * @retval none
-  */
+ * @brief  é…ç½®(å…¼å®¹æ—§API)
+ */
+void ADS1220Config(void)
+{
+    ads1220HwConfig(&ads1220Handle);
+}
+
+/*============================================================================*/
+/*                              ä¿®å¤åçš„Setå‡½æ•°(è¯»-æ”¹-å†™æ¨¡å¼)                   */
+/*============================================================================*/
+
 int ADS1220SetChannel(int Mux)
 {
-	unsigned int cMux = Mux;	   
-   /* write the register value containing the new value back to the ADS */
-   ADS1220WriteRegister(ADS1220_0_REGISTER, 0x01, &cMux);
-   return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG0, ADS1220_REG0_MUX_MASK, (uint8_t)Mux);
 }
-/**
-  * @brief  void ADS1220SetGain(ADS1220_Gain Gain)
-* @param  Gain:ÒªÉèÖÃµÄ·Å´ó±¶Êı ¸ù¾İÃ¶¾ÙÀàĞÍ ADS1220_Gain
-  * @retval none
-  */
+
 void ADS1220SetGain(ADS1220_Gain Gain)
 {
-	unsigned int temp=0;
-  ADS1220ReadRegister(ADS1220_0_REGISTER, 0x01, &temp);
-	temp = temp & 0xf0; 
-	switch(Gain)
-	{
-		case GAIN_1:
-			temp = temp | GAIN_1;
-			break;
-		case GAIN_2:
-			temp = temp | GAIN_2;
-			break;
-		case GAIN_4:
-			temp = temp | GAIN_4;
-			break;
-		case GAIN_8:
-			temp = temp | GAIN_8;
-			break;	
-		case GAIN_16:
-			temp = temp | GAIN_16;
-			break;
-		case GAIN_32:
-			temp = temp | GAIN_32;
-			break;
-		case GAIN_64:
-			temp = temp | GAIN_64;
-			break;
-		case GAIN_128:
-			temp = temp | GAIN_128;
-			break;			
-	}
-	ADS1220WriteRegister(ADS1220_0_REGISTER, 0x01, &temp);
+    ads1220SetRegBits(&ads1220Handle, ADS1220_REG0, ADS1220_REG0_GAIN_MASK, (uint8_t)Gain);
 }
 
 int ADS1220SetPGABypass(int Bypass)
 {
-	unsigned int cBypass = Bypass;
-	/* write the register value containing the new code back to the ADS */
-	ADS1220WriteRegister(ADS1220_0_REGISTER, 0x01, &cBypass);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG0, ADS1220_REG0_PGA_MASK, Bypass ? 0x01 : 0x00);
 }
+
 int ADS1220SetDataRate(int DataRate)
 {
-	unsigned int cDataRate = DataRate;  
-	/* write the register value containing the new value back to the ADS */
-	ADS1220WriteRegister(ADS1220_1_REGISTER, 0x01, &cDataRate);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG1, ADS1220_REG1_DR_MASK, (uint8_t)DataRate);
 }
+
 int ADS1220SetClockMode(int ClockMode)
 {
-	unsigned int cClockMode = ClockMode;
-   	/* write the register value containing the value back to the ADS */
-	ADS1220WriteRegister(ADS1220_1_REGISTER, 0x01, &cClockMode);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG1, ADS1220_REG1_MODE_MASK, (uint8_t)ClockMode);
 }
+
 int ADS1220SetPowerDown(int PowerDown)
 {
-	unsigned int cPowerDown = PowerDown;
-   	/* write the register value containing the new value back to the ADS */
-	ADS1220WriteRegister(ADS1220_1_REGISTER, 0x01, &cPowerDown);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG1, ADS1220_REG1_CM_MASK, PowerDown ? 0x04 : 0x00);
 }
+
 int ADS1220SetTemperatureMode(int TempMode)
 {
-	unsigned int cTempMode = TempMode;
-   	/* write the register value containing the new value back to the ADS */
-	ADS1220WriteRegister(ADS1220_1_REGISTER, 0x01, &cTempMode);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG1, ADS1220_REG1_TS_MASK, TempMode ? 0x02 : 0x00);
 }
+
 int ADS1220SetBurnOutSource(int BurnOut)
 {
-	unsigned int cBurnOut = BurnOut;
-   	/* write the register value containing the new value back to the ADS */
-	ADS1220WriteRegister(ADS1220_1_REGISTER, 0x01, &cBurnOut);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG1, ADS1220_REG1_BCS_MASK, BurnOut ? 0x01 : 0x00);
 }
+
 int ADS1220SetVoltageReference(int VoltageRef)
 {
-	unsigned int cVoltageRef = VoltageRef;
-   	/* write the register value containing the new value back to the ADS */
-	ADS1220WriteRegister(ADS1220_2_REGISTER, 0x01, &cVoltageRef);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG2, ADS1220_REG2_VREF_MASK, (uint8_t)VoltageRef);
 }
+
 int ADS1220Set50_60Rejection(int Rejection)
 {
-	unsigned int cRejection = Rejection;
-   	/* write the register value containing the new value back to the ADS */
-	ADS1220WriteRegister(ADS1220_2_REGISTER, 0x01, &cRejection);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG2, ADS1220_REG2_FIR_MASK, (uint8_t)Rejection);
 }
+
 int ADS1220SetLowSidePowerSwitch(int PowerSwitch)
 {
-	unsigned int cPowerSwitch = PowerSwitch;
-   	/* write the register value containing the new value back to the ADS */
-	ADS1220WriteRegister(ADS1220_2_REGISTER, 0x01, &cPowerSwitch);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG2, ADS1220_REG2_PSW_MASK, PowerSwitch ? 0x08 : 0x00);
 }
+
 int ADS1220SetCurrentDACOutput(int CurrentOutput)
 {
-	unsigned int cCurrentOutput = CurrentOutput;
-   	/* write the register value containing the new value back to the ADS */
-	ADS1220WriteRegister(ADS1220_2_REGISTER, 0x01, &cCurrentOutput);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG2, ADS1220_REG2_IDAC_MASK, (uint8_t)CurrentOutput);
 }
+
 int ADS1220SetIDACRouting(int IDACRoute)
 {
-	unsigned int cIDACRoute = IDACRoute;
-	/* write the register value containing the new value back to the ADS */
-	ADS1220WriteRegister(ADS1220_3_REGISTER, 0x01, &cIDACRoute);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG3, 
+                                   ADS1220_REG3_I1MUX_MASK | ADS1220_REG3_I2MUX_MASK, 
+                                   (uint8_t)IDACRoute);
 }
+
 int ADS1220SetDRDYMode(int DRDYMode)
 {
-	unsigned int cDRDYMode = DRDYMode;
-   	/* write the register value containing the new gain code back to the ADS */
-	ADS1220WriteRegister(ADS1220_3_REGISTER, 0x01, &cDRDYMode);
-	return ADS1220_NO_ERROR;
+    return (int)ads1220SetRegBits(&ads1220Handle, ADS1220_REG3, ADS1220_REG3_DRDYM_MASK, DRDYMode ? 0x02 : 0x00);
 }
-/*
-******************************************************************************
-register get value commands
-*/
+
+/*============================================================================*/
+/*                              Getå‡½æ•°                                        */
+/*============================================================================*/
+
 int ADS1220GetChannel(void)
 {
-	unsigned Temp;
-	/* Parse Mux data from register */
-	ADS1220ReadRegister(ADS1220_0_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return (Temp >>4);
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG0, 1, &temp);
+    return (temp >> 4);
 }
+
 int ADS1220GetGain(void)
 {
-	unsigned Temp;
-	/* Parse Gain data from register */
-	ADS1220ReadRegister(ADS1220_0_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( (Temp & 0x0e) >>1);
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG0, 1, &temp);
+    return ((temp & 0x0E) >> 1);
 }
+
 int ADS1220GetPGABypass(void)
 {
-	unsigned Temp;
-	/* Parse Bypass data from register */
-	ADS1220ReadRegister(ADS1220_0_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return (Temp & 0x01);
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG0, 1, &temp);
+    return (temp & 0x01);
 }
+
 int ADS1220GetDataRate(void)
 {
-	unsigned Temp;
-	/* Parse DataRate data from register */
-	ADS1220ReadRegister(ADS1220_1_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( Temp >>5 );
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG1, 1, &temp);
+    return (temp >> 5);
 }
+
 int ADS1220GetClockMode(void)
 {
-	unsigned Temp;
-	/* Parse ClockMode data from register */
-	ADS1220ReadRegister(ADS1220_1_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( (Temp & 0x18) >>3 );
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG1, 1, &temp);
+    return ((temp & 0x18) >> 3);
 }
+
 int ADS1220GetPowerDown(void)
 {
-	unsigned Temp;
-	/* Parse PowerDown data from register */
-	ADS1220ReadRegister(ADS1220_1_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( (Temp & 0x04) >>2 );
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG1, 1, &temp);
+    return ((temp & 0x04) >> 2);
 }
+
 int ADS1220GetTemperatureMode(void)
 {
-	unsigned Temp;
-	/* Parse TempMode data from register */
-	ADS1220ReadRegister(ADS1220_1_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( (Temp & 0x02) >>1 );
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG1, 1, &temp);
+    return ((temp & 0x02) >> 1);
 }
+
 int ADS1220GetBurnOutSource(void)
 {
-	unsigned Temp;
-	/* Parse BurnOut data from register */
-	ADS1220ReadRegister(ADS1220_1_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( Temp & 0x01 );
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG1, 1, &temp);
+    return (temp & 0x01);
 }
+
 int ADS1220GetVoltageReference(void)
 {
-	unsigned Temp;
-	/* Parse VoltageRef data from register */
-	ADS1220ReadRegister(ADS1220_2_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( Temp >>6 );
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG2, 1, &temp);
+    return (temp >> 6);
 }
+
 int ADS1220Get50_60Rejection(void)
 {
-	unsigned Temp;
-	/* Parse Rejection data from register */
-	ADS1220ReadRegister(ADS1220_2_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( (Temp & 0x30) >>4 );
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG2, 1, &temp);
+    return ((temp & 0x30) >> 4);
 }
+
 int ADS1220GetLowSidePowerSwitch(void)
 {
-	unsigned Temp;
-	/* Parse PowerSwitch data from register */
-	ADS1220ReadRegister(ADS1220_2_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( (Temp & 0x08) >>3);
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG2, 1, &temp);
+    return ((temp & 0x08) >> 3);
 }
+
 int ADS1220GetCurrentDACOutput(void)
 {
-	unsigned Temp;
-	/* Parse IDACOutput data from register */
-	ADS1220ReadRegister(ADS1220_2_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( Temp & 0x07 );
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG2, 1, &temp);
+    return (temp & 0x07);
 }
+
 int ADS1220GetIDACRouting(int WhichOne)
 {
-	unsigned Temp;
-	/* Check WhichOne sizing */
-	if (WhichOne >1) return ADS1220_ERROR;
-	
-	/* Parse Mux data from register */
-	ADS1220ReadRegister(ADS1220_3_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	if (WhichOne) return ( (Temp & 0x1c) >>2);
-	else return ( Temp >>5 );
+    unsigned temp;
+    
+    if (WhichOne > 1)
+        return ADS1220_ERROR;
+    
+    ADS1220ReadRegister(ADS1220_REG3, 1, &temp);
+    
+    if (WhichOne)
+        return ((temp & 0x1C) >> 2);
+    else
+        return (temp >> 5);
 }
+
 int ADS1220GetDRDYMode(void)
 {
-	unsigned Temp;
-	/* Parse DRDYMode data from register */
-	ADS1220ReadRegister(ADS1220_3_REGISTER, 0x01, &Temp);
-	/* return the parsed data */
-	return ( (Temp & 0x02) >>1 );
+    unsigned temp;
+    ADS1220ReadRegister(ADS1220_REG3, 1, &temp);
+    return ((temp & 0x02) >> 1);
 }
-
-
-
-
