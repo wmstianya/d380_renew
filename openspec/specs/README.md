@@ -34,6 +34,7 @@
 
 | 规格 | 文件 | 说明 |
 |------|------|------|
+| [UART DMA驱动](uart-driver/spec.md) | `uart-driver/spec.md` | DMA+IDLE线检测、双缓冲、ModBus |
 | [多机联控](multi-device-coordination/spec.md) | `multi-device-coordination/spec.md` | 主从机通信、负荷分配、协同控制 |
 | [通信协议](communication-protocol/spec.md) | `communication-protocol/spec.md` | UART、ModBus、主从通信协议 |
 
@@ -41,6 +42,7 @@
 
 | 规格 | 文件 | 说明 |
 |------|------|------|
+| [ADS1220驱动](ads1220-driver/spec.md) | `ads1220-driver/spec.md` | 24位ADC驱动、DWT延迟、软件SPI |
 | [传感器采集](sensor-acquisition/spec.md) | `sensor-acquisition/spec.md` | ADC采集、信号处理、数据滤波 |
 | [显示控制](display-control/spec.md) | `display-control/spec.md` | 串口屏通信、界面更新、触摸响应 |
 
