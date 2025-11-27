@@ -103,8 +103,8 @@ int main(void)
 	uartTestStartLoopback(&uartDisplayHandle, UART_TEST_COUNT, UART_TEST_PACKET_SIZE);
 #endif
 
-//***************串口4 DMA驱动 for 联控或本地通信****//
-	uartUnionInit(9600);  //DMA + IDLE中断模式	 
+//***************串口4初始化为 联控或者本地通信 ****//
+	uart4_init(9600); //优先级2:2	 
 
 	
 //***配置1ms定时中断,包括全串口接收周期时间配置***//

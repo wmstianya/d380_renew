@@ -1,8 +1,9 @@
 #include "usart4.h"
 #include "stdarg.h"
+#include "uart_driver.h"
 
-//´®¿Ú·¢ËÍ»º´æÇø 	
-uint8 USART4_TX_BUF[256]; 	             //·¢ËÍ»º³å,×î´óUSART3_MAX_SEND_LEN×Ö½Ú	 1024 
+//ï¿½ï¿½ï¿½Ú·ï¿½ï¿½Í»ï¿½ï¿½ï¿½ï¿½ï¿½ 	
+uint8 USART4_TX_BUF[256]; 	             //ï¿½ï¿½ï¿½Í»ï¿½ï¿½ï¿½,ï¿½ï¿½ï¿½USART3_MAX_SEND_LENï¿½Ö½ï¿½	 1024 
 
 
 
@@ -24,19 +25,19 @@ USlave_Struct JiZu[12];
 
 
 
-uint8 cmd_get_time[] ={0x5A, 0xA5, 0x03,0x81,0x20,0x10};//ÓÃÓÚÔÚ¿ª»úÊ±·¢ÃüÁî¸øLCD£¬Í¬²½Ê±¼äĞÅÏ¢
+uint8 cmd_get_time[] ={0x5A, 0xA5, 0x03,0x81,0x20,0x10};//ï¿½ï¿½ï¿½ï¿½ï¿½Ú¿ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½LCDï¿½ï¿½Í¬ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ï¢
 
-uint8 cmd_get_set_time[] ={0x5A,0XA5,0X04,0X83,0X00,0XB0,0X0B};//ÓÃÓÚ¶ÁÈ¡ÓÃ»§ÉèÖÃÊ±¼ä±äÁ¿
-///////////////////////////////////////USART4 printfÖ§³Ö²¿·Ö//////////////////////////////////
-//´®¿Ú2,u2_printf º¯Êı
-//È·±£Ò»´Î·¢ËÍÊı¾İ²»³¬¹ıUSART4_MAX_SEND_LEN×Ö½Ú
+uint8 cmd_get_set_time[] ={0x5A,0XA5,0X04,0X83,0X00,0XB0,0X0B};//ï¿½ï¿½ï¿½Ú¶ï¿½È¡ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½
+///////////////////////////////////////USART4 printfÖ§ï¿½Ö²ï¿½ï¿½ï¿½//////////////////////////////////
+//ï¿½ï¿½ï¿½ï¿½2,u2_printf ï¿½ï¿½ï¿½ï¿½
+//È·ï¿½ï¿½Ò»ï¿½Î·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ²ï¿½ï¿½ï¿½ï¿½ï¿½USART4_MAX_SEND_LENï¿½Ö½ï¿½
 ////////////////////////////////////////////////////////////////////////////////////////////////
 void u4_printf(char* fmt,...)  
 {  
   int len=0;
 	int cnt=0;
 //	unsigned  char i;
-//	unsigned  char Frame_Info[5]; //Ö¸Áî³¤¶È
+//	unsigned  char Frame_Info[5]; //Ö¸ï¿½î³¤ï¿½ï¿½
 	va_list ap;
 	va_start(ap,fmt);
 	vsprintf((char*)USART4_TX_BUF,fmt,ap);
@@ -44,7 +45,7 @@ void u4_printf(char* fmt,...)
 	len = strlen((const char*)USART4_TX_BUF);
 	while(len--)
 	  {
-	  while(USART_GetFlagStatus(UART4,USART_FLAG_TC)!=1); //µÈ´ı·¢ËÍ½áÊø
+	  while(USART_GetFlagStatus(UART4,USART_FLAG_TC)!=1); //ï¿½È´ï¿½ï¿½ï¿½ï¿½Í½ï¿½ï¿½ï¿½
 	  USART_SendData(UART4,USART4_TX_BUF[cnt++]);
 	  }
 }
@@ -54,76 +55,78 @@ void u4_printf(char* fmt,...)
 
 
 
-//´®¿Ú4·¢ËÍs¸ö×Ö·û
+//ï¿½ï¿½ï¿½ï¿½4ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ö·ï¿½
 
-///////////////////////////////////////USART2 ³õÊ¼»¯ÅäÖÃ²¿·Ö//////////////////////////////////	    
-//¹¦ÄÜ£º³õÊ¼»¯IO ´®¿Ú2
-//ÊäÈë²ÎÊı
-//bound:²¨ÌØÂÊ
-//Êä³ö²ÎÊı
-//ÎŞ
+///////////////////////////////////////USART2 ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½//////////////////////////////////	    
+//ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½IO ï¿½ï¿½ï¿½ï¿½2
+//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//bound:ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//ï¿½ï¿½
 //////////////////////////////////////////////////////////////////////////////////////////////	  
 void uart4_init(u32 bound)
 {  	 		 
-	//GPIO¶Ë¿ÚÉèÖÃ
+	//GPIOï¿½Ë¿ï¿½ï¿½ï¿½ï¿½ï¿½
     GPIO_InitTypeDef GPIO_InitStructure;
 	USART_InitTypeDef USART_InitStructure;
 	NVIC_InitTypeDef NVIC_InitStructure;
 	 
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART4, ENABLE);	//Ê¹ÄÜUSART4
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);	//Ê¹ÄÜGPIOCÊ±ÖÓ
-	USART_DeInit(UART4);  //¸´Î»´®¿Ú4
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART4, ENABLE);	//Ê¹ï¿½ï¿½USART4
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);	//Ê¹ï¿½ï¿½GPIOCÊ±ï¿½ï¿½
+	USART_DeInit(UART4);  //ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½4
 
      //USART4_TX   PC.10
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10; //PC.10
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;	//¸´ÓÃÍÆÍìÊä³ö
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     GPIO_Init(GPIOC, &GPIO_InitStructure);
    
     //USART4_RX	  PC.11
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;//¸¡¿ÕÊäÈë
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     GPIO_Init(GPIOC, &GPIO_InitStructure);  
 
-    //Usart4 NVIC ÅäÖÃ
+    //Usart4 NVIC ï¿½ï¿½ï¿½ï¿½
     NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority= 2;//ÇÀÕ¼ÓÅÏÈ¼¶3
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;		//×ÓÓÅÏÈ¼¶3
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;			//IRQÍ¨µÀÊ¹ÄÜ
-	NVIC_Init(&NVIC_InitStructure);	        //¸ù¾İÖ¸¶¨µÄ²ÎÊı³õÊ¼»¯VIC¼Ä´æÆ÷
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority= 2;//ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½È¼ï¿½3
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;		//ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½3
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;			//IRQÍ¨ï¿½ï¿½Ê¹ï¿½ï¿½
+	NVIC_Init(&NVIC_InitStructure);	        //ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½VICï¿½Ä´ï¿½ï¿½ï¿½
   
-    //USART4 ³õÊ¼»¯ÉèÖÃ
-	USART_InitStructure.USART_BaudRate = bound;   //Ò»°ãÉèÖÃÎª9600;
-	USART_InitStructure.USART_WordLength = USART_WordLength_8b;  //×Ö³¤Îª8Î»Êı¾İ¸ñÊ½
-	USART_InitStructure.USART_StopBits = USART_StopBits_1;  //Ò»¸öÍ£Ö¹Î»
-	USART_InitStructure.USART_Parity = USART_Parity_No;  //ÎŞÆæÅ¼Ğ£ÑéÎ»
-	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;  //ÎŞÓ²¼şÊı¾İÁ÷¿ØÖÆ
-	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;	  //ÊÕ·¢Ä£Ê½
+    //USART4 ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	USART_InitStructure.USART_BaudRate = bound;   //Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª9600;
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;  //ï¿½Ö³ï¿½Îª8Î»ï¿½ï¿½ï¿½İ¸ï¿½Ê½
+	USART_InitStructure.USART_StopBits = USART_StopBits_1;  //Ò»ï¿½ï¿½Í£Ö¹Î»
+	USART_InitStructure.USART_Parity = USART_Parity_No;  //ï¿½ï¿½ï¿½ï¿½Å¼Ğ£ï¿½ï¿½Î»
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;  //ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;	  //ï¿½Õ·ï¿½Ä£Ê½
 
-    USART_Init(UART4, &USART_InitStructure);   //³õÊ¼»¯´®¿Ú
-    USART_ITConfig(UART4, USART_IT_RXNE, ENABLE);  //¿ªÆôÖĞ¶Ï
-    USART_Cmd(UART4, ENABLE);                      //Ê¹ÄÜ´®¿Ú 
+    USART_Init(UART4, &USART_InitStructure);   //ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    USART_ITConfig(UART4, USART_IT_RXNE, ENABLE);  //ï¿½ï¿½ï¿½ï¿½ï¿½Ğ¶ï¿½
+    USART_Cmd(UART4, ENABLE);                      //Ê¹ï¿½Ü´ï¿½ï¿½ï¿½ 
 	
-//	USART_DMACmd(USART2,USART_DMAReq_Tx,ENABLE);    //Ê¹ÄÜ´®¿Ú2µÄDMA·¢ËÍ
-//	UART_DMA_Config(DMA1_Channel7,(u32)&USART2->DR,(u32)USART2_TX_BUF,1000);  //DMA1Í¨µÀ7,ÍâÉèÎª´®¿Ú2,´æ´¢Æ÷ÎªUSART2_TX_BUF,³¤¶È1000. 										  	
+//	USART_DMACmd(USART2,USART_DMAReq_Tx,ENABLE);    //Ê¹ï¿½Ü´ï¿½ï¿½ï¿½2ï¿½ï¿½DMAï¿½ï¿½ï¿½ï¿½
+//	UART_DMA_Config(DMA1_Channel7,(u32)&USART2->DR,(u32)USART2_TX_BUF,1000);  //DMA1Í¨ï¿½ï¿½7,ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½2,ï¿½æ´¢ï¿½ï¿½ÎªUSART2_TX_BUF,ï¿½ï¿½ï¿½ï¿½1000. 										  	
 }
 
 
 
 void ModBus_Uart4_Local_Communication(void)
 {
-	/**************·Ö»ú½ÓÊÕÖ÷»úÊı¾İ²¢·´À¡***********************/	
+	/* ä»æœºæœ¬åœ°æ•°æ®å¤„ç† - DMA+IDLEæ¨¡å¼ */	
 		uint8  i = 0;	
 		
 		uint16 checksum = 0;
+		uint8_t* rxData;
+		uint16_t rxLen;
 
-		if(Sys_Admin.Device_Style == 0 || Sys_Admin.Device_Style == 1) //Ïà±ä»úĞÍ»ò¶àÆ´»úĞÍ£¬¸úÖ÷»úÊ§ÁªÇé¿ö´¦Àí
+		if(Sys_Admin.Device_Style == 0 || Sys_Admin.Device_Style == 1)
 			{
 				if(sys_flag.Address_Number >= 1)
 					{
-						if(sys_flag.UnTalk_Time > 15) //15Ãë
+						if(sys_flag.UnTalk_Time > 15) //15ç§’
 							{
-								LCD4013X.DLCD.UnionControl_Flag = 0;  //Éè±¸ÔÚÁª»ú×´Ì¬
+								LCD4013X.DLCD.UnionControl_Flag = 0;  //è®¾å¤‡è”æ§çŠ¶æ€
 								if(sys_data.Data_10H == 2)
 									{
 										//sys_close_cmd();
@@ -132,7 +135,7 @@ void ModBus_Uart4_Local_Communication(void)
 									}
 								if(sys_data.Data_10H == 3)
 									{
-										//Èç¹ûÃ»ÓĞ·ÖÆÁÔÚÏß
+										//å¦‚æœæ²¡æœ‰åˆ†æœºè¿æ¥
 										 if(sys_flag.Lcd4013_OnLive_Flag == 0)
 										 	{
 										 		 sys_data.Data_10H = 0;
@@ -146,15 +149,24 @@ void ModBus_Uart4_Local_Communication(void)
 					}
 			}
 
-		
-
-		
+		/* DMAæ¥æ”¶: æ£€æŸ¥æ¥æ”¶å®Œæˆæ ‡å¿— */
+		if (uartIsRxReady(&uartUnionHandle))
+		{
+			if (uartGetRxData(&uartUnionHandle, &rxData, &rxLen) == UART_OK)
+			{
+				/* å¤åˆ¶æ•°æ®åˆ°U4_Infä»¥å…¼å®¹åç»­ä»£ç  */
+				for (i = 0; i < rxLen && i < 250; i++)
+					U4_Inf.RX_Data[i] = rxData[i];
+				U4_Inf.RX_Length = rxLen;
+				U4_Inf.Recive_Ok_Flag = 1;
+			}
+		}
 
 	
 		if(U4_Inf.Recive_Ok_Flag)
 			{
-				U4_Inf.Recive_Ok_Flag = 0;//²»ÄÜÉÙÅ¶
-				 //¹Ø±ÕÖĞ¶Ï
+				U4_Inf.Recive_Ok_Flag = 0;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¶
+				 //ï¿½Ø±ï¿½ï¿½Ğ¶ï¿½
 				USART_ITConfig(UART4, USART_IT_RXNE, DISABLE); 
 				 
 				checksum  = U4_Inf.RX_Data[U4_Inf.RX_Length - 2] * 256 + U4_Inf.RX_Data[U4_Inf.RX_Length - 1];
@@ -163,24 +175,24 @@ void ModBus_Uart4_Local_Communication(void)
 
 				
 				
-			//ÀÏ°å¼ü£¬¶ÔÉè±¸ĞòÁĞºÅ½øĞĞĞŞ¸Ä
+			//ï¿½Ï°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½è±¸ï¿½ï¿½ï¿½ĞºÅ½ï¿½ï¿½ï¿½ï¿½Ş¸ï¿½
 				if( checksum == ModBusCRC16(U4_Inf.RX_Data,U4_Inf.RX_Length))
 					{
-						//u4_printf("\n*µØÖ·²ÎÊı= %d\n",Sys_Admin.ModBus_Address);
+						//u4_printf("\n*ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½= %d\n",Sys_Admin.ModBus_Address);
 						
 						if(sys_flag.Address_Number == 0)
 							{
-								//¸ù¾İÆÁÄ»Éè¶¨µØÖ·
+								//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½è¶¨ï¿½ï¿½Ö·
 								//if(U4_Inf.RX_Data[0] ==Sys_Admin.ModBus_Address)
 								//	UART4_Server_Cmd_Analyse();
 							}
 						else
 							{
-								//¸ù¾İÖ÷°å²¦ÂëµØÖ·
+								//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å²¦ï¿½ï¿½ï¿½Ö·
 								if(U4_Inf.RX_Data[0] == sys_flag.Address_Number)
 									{
 										sys_flag.UnTalk_Time = 0;
-										LCD4013X.DLCD.UnionControl_Flag = OK;  //Éè±¸ÔÚÁª»ú×´Ì¬
+										LCD4013X.DLCD.UnionControl_Flag = OK;  //ï¿½è±¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬
 										UART4_Server_Cmd_Analyse();
 									}
 									
@@ -192,12 +204,12 @@ void ModBus_Uart4_Local_Communication(void)
 					
 			 
 				
-			//¶Ô½ÓÊÕ»º³åÆ÷ÇåÁã
+			/* æ¸…ç©ºæ¥æ”¶ç¼“å†² */
 				for( i = 0; i < 200;i++ )
 					U4_Inf.RX_Data[i] = 0x00;
 			
-			//ÖØĞÂ¿ªÆôÖĞ¶Ï
-				USART_ITConfig(UART4, USART_IT_RXNE, ENABLE); 
+			/* DMAé©±åŠ¨: æ¸…é™¤æ¥æ”¶å®Œæˆæ ‡å¿— */
+				uartClearRxFlag(&uartUnionHandle);
 				
 			}
 }
@@ -212,7 +224,7 @@ void UART4_Server_Cmd_Analyse(void)
 	uint16 Value = 0;
 	uint16 Address = 0;
 	uint16 Data = 0; 
-	uint8  Device_ID = Sys_Admin.ModBus_Address; //Éí·İµØÖ·£¬²»ÄÜ´í ************88
+	uint8  Device_ID = Sys_Admin.ModBus_Address; //ï¿½ï¿½ï¿½İµï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½Ü´ï¿½ ************88
 	float  value_buffer = 0;
 	uint16 check_sum = 0;
 	uint16 Data1 = 0;
@@ -233,7 +245,7 @@ void UART4_Server_Cmd_Analyse(void)
 	Cmd = U4_Inf.RX_Data[1];
 	Address = U4_Inf.RX_Data[2] *256+ U4_Inf.RX_Data[3];
 	Length = U4_Inf.RX_Data[4] *256+ U4_Inf.RX_Data[5];
-	Value = U4_Inf.RX_Data[4] *256+ U4_Inf.RX_Data[5]; //06¸ñÊ½ÏÂ£¬ 
+	Value = U4_Inf.RX_Data[4] *256+ U4_Inf.RX_Data[5]; //06ï¿½ï¿½Ê½ï¿½Â£ï¿½ 
 	
 	
 	switch (Cmd)
@@ -243,68 +255,68 @@ void UART4_Server_Cmd_Analyse(void)
 					switch (Address)
 						{
 							case 100:
-									if( Length == 18)  //Õâ±ßµÄÊı¾İ³¤¶ÈÒ²¸ù¾İ×Ü±ä»¯£¬²»ÊÇ×Ö½Ú³¤¶ÈµÄ±ä»¯
+									if( Length == 18)  //ï¿½ï¿½ßµï¿½ï¿½ï¿½ï¿½İ³ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½Ü±ä»¯ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½Ú³ï¿½ï¿½ÈµÄ±ä»¯
 										{
 											
 											U4_Inf.TX_Data[0] = Device_ID;
 											U4_Inf.TX_Data[1] = 0x03;// 
-											U4_Inf.TX_Data[2] = 36; //Êı¾İ³¤¶ÈÎª6£¬ ¸ù¾İÇé¿ö¸Ä±ä***
+											U4_Inf.TX_Data[2] = 36; //ï¿½ï¿½ï¿½İ³ï¿½ï¿½ï¿½Îª6ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½***
 									
 											U4_Inf.TX_Data[3] = 0x00;
-											U4_Inf.TX_Data[4] = sys_data.Data_10H;// 1µ±Ç°µÄÔËĞĞ×´Ì¬
+											U4_Inf.TX_Data[4] = sys_data.Data_10H;// 1ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬
 
 											U4_Inf.TX_Data[5] = Temperature_Data.Pressure_Value >> 8 ;
-											U4_Inf.TX_Data[6] = Temperature_Data.Pressure_Value & 0X00FF;//2 ¸÷Ä£¿é²»¾ß±¸Ñ¹Á¦±äËÍÆ÷
+											U4_Inf.TX_Data[6] = Temperature_Data.Pressure_Value & 0X00FF;//2 ï¿½ï¿½Ä£ï¿½é²»ï¿½ß±ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 											
 											U4_Inf.TX_Data[7] = 0x00;
-											U4_Inf.TX_Data[8] = 0;//3µ±Ç°ÕôÆûµÄÎÂ¶È
+											U4_Inf.TX_Data[8] = 0;//3ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ï¿½
 
 											U4_Inf.TX_Data[9] = 0x00;
-											U4_Inf.TX_Data[10] = LCD10D.DLCD.Water_State;//4µ±Ç°Ë®Î»µÄ×´Ì¬
+											U4_Inf.TX_Data[10] = LCD10D.DLCD.Water_State;//4ï¿½ï¿½Ç°Ë®Î»ï¿½ï¿½×´Ì¬
 
 											
 											U4_Inf.TX_Data[11] = 0;
-											U4_Inf.TX_Data[12] = sys_data.Data_12H;//5 Òì³£×´Ì¬·´À¡¸ø¿ØÖÆ
+											U4_Inf.TX_Data[12] = sys_data.Data_12H;//5 ï¿½ì³£×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 
 											 
 											U4_Inf.TX_Data[13] = sys_flag.Protect_WenDu >> 8;
-											U4_Inf.TX_Data[14] = sys_flag.Protect_WenDu & 0x00FF;//6ÄÚ²¿ÑÌÆøµÄÎÂ¶È
+											U4_Inf.TX_Data[14] = sys_flag.Protect_WenDu & 0x00FF;//6ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ï¿½
 
 											U4_Inf.TX_Data[15] = 0;
-											U4_Inf.TX_Data[16] = sys_flag.Error_Code;//7¹ÊÕÏ´úÂë
+											U4_Inf.TX_Data[16] = sys_flag.Error_Code;//7ï¿½ï¿½ï¿½Ï´ï¿½ï¿½ï¿½
 
 											U4_Inf.TX_Data[17] = 0;
-											U4_Inf.TX_Data[18] = sys_flag.flame_state;//8»ğÑæ×´Ì¬ 
+											U4_Inf.TX_Data[18] = sys_flag.flame_state;//8ï¿½ï¿½ï¿½ï¿½×´Ì¬ 
 
 											U4_Inf.TX_Data[19] = sys_flag.Fan_Rpm >> 8;
-											U4_Inf.TX_Data[20] = sys_flag.Fan_Rpm & 0x00FF;//9·ç»ú×ªËÙ
+											U4_Inf.TX_Data[20] = sys_flag.Fan_Rpm & 0x00FF;//9ï¿½ï¿½ï¿½×ªï¿½ï¿½
 
 											U4_Inf.TX_Data[21] = Temperature_Data.Inside_High_Pressure >> 8;
-											U4_Inf.TX_Data[22] = Temperature_Data.Inside_High_Pressure & 0x00FF;      //10 Ïà±ä»ú×éÄÚ²¿Ñ¹Á¦
+											U4_Inf.TX_Data[22] = Temperature_Data.Inside_High_Pressure & 0x00FF;      //10 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú²ï¿½Ñ¹ï¿½ï¿½
 
  											U4_Inf.TX_Data[23] = 0;
- 											U4_Inf.TX_Data[24] = sys_data.Data_1FH ;//11·ç»ú¹¦ÂÊ 
+ 											U4_Inf.TX_Data[24] = sys_data.Data_1FH ;//11ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 
 
 											U4_Inf.TX_Data[25] = 0;
-											U4_Inf.TX_Data[26] = Switch_Inf.air_on_flag; //12·ç»úÔËĞĞ×´Ì¬
+											U4_Inf.TX_Data[26] = Switch_Inf.air_on_flag; //12ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬
 
 
 											U4_Inf.TX_Data[27] = 0;
-											U4_Inf.TX_Data[28] = Switch_Inf.Water_Valve_Flag;//13½øË®·§
+											U4_Inf.TX_Data[28] = Switch_Inf.Water_Valve_Flag;//13ï¿½ï¿½Ë®ï¿½ï¿½
 
 											U4_Inf.TX_Data[29] = 0;
-											U4_Inf.TX_Data[30] = Switch_Inf.pai_wu_flag;//14ÅÅÎÛ·§×´Ì¬
+											U4_Inf.TX_Data[30] = Switch_Inf.pai_wu_flag;//14ï¿½ï¿½ï¿½Û·ï¿½×´Ì¬
 
 											U4_Inf.TX_Data[31] = 0;
-											U4_Inf.TX_Data[32] = Switch_Inf.LianXu_PaiWu_flag;//15Á¬ĞøÅÅÎÛ·§×´Ì¬
+											U4_Inf.TX_Data[32] = Switch_Inf.LianXu_PaiWu_flag;//15ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Û·ï¿½×´Ì¬
 											
 											
 											U4_Inf.TX_Data[33] = 0;
-											U4_Inf.TX_Data[34] = 0;//16  Î´Ê¹ÓÃ
+											U4_Inf.TX_Data[34] = 0;//16  Î´Ê¹ï¿½ï¿½
 											
 											U4_Inf.TX_Data[35] = sys_flag.TimeDianHuo_Flag;
-											U4_Inf.TX_Data[36] = sys_flag.Paiwu_Flag; //17  ×Ô¶¯ÅÅÎÛÒÑ¾­¿ªÆô±êÖ¾£¬ 
+											U4_Inf.TX_Data[36] = sys_flag.Paiwu_Flag; //17  ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½ï¿½ 
 
 											U4_Inf.TX_Data[37] = sys_flag.Inputs_State >> 8;
 											U4_Inf.TX_Data[38] = sys_flag.Inputs_State & 0x00FF;//18 
@@ -313,7 +325,7 @@ void UART4_Server_Cmd_Analyse(void)
 											
 										
 										 
-											check_sum  = ModBusCRC16(U4_Inf.TX_Data,41);   //Õâ¸ö¸ù¾İ×Ü×Ö½ÚÊı¸Ä±ä
+											check_sum  = ModBusCRC16(U4_Inf.TX_Data,41);   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½
 											U4_Inf.TX_Data[39]  = check_sum >> 8 ;
 											U4_Inf.TX_Data[40]  = check_sum & 0x00FF;
 											
@@ -332,22 +344,22 @@ void UART4_Server_Cmd_Analyse(void)
 						}
 					
 
-					//Õë¶ÔÑ¹Á¦×ö¸¡µãÊı×ª»»
+					//ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½
 					
 					break;
 			
-			case 0x10:   //¶à¸ö¼Ä´æÆ÷Ğ´Èë
+			case 0x10:   //ï¿½ï¿½ï¿½ï¿½Ä´ï¿½ï¿½ï¿½Ğ´ï¿½ï¿½
 						
 						Data_Address = U4_Inf.RX_Data[2] * 256 + U4_Inf.RX_Data[3];
 						Data_Length = U4_Inf.RX_Data[4] * 256 + U4_Inf.RX_Data[5];
-						Buffer_Data16 = U4_Inf.RX_Data[7] *256 + U4_Inf.RX_Data[8];  //¸ßµÍ×Ö½ÚµÄË³Ğòµßµ¹
+						Buffer_Data16 = U4_Inf.RX_Data[7] *256 + U4_Inf.RX_Data[8];  //ï¿½ßµï¿½ï¿½Ö½Úµï¿½Ë³ï¿½ï¿½ßµï¿½
 						
 						switch (Data_Address)
 							{
-							case 0xC8:   //´¦Àí¶à¸ö²ÎÊıµÄĞ´ÈëÎÊÌâ
-										// u1_printf("\n* ÊÕµ½Êı¾İ = %d\n",Buffer_Data16);
+							case 0xC8:   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+										// u1_printf("\n* ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ = %d\n",Buffer_Data16);
 
-										//1¡¢Ö¸ÁîÄ£Ê½£¬Æô¶¯£¬Í£Ö¹£¬ÊÖ¶¯
+										//1ï¿½ï¿½Ö¸ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£Ö¹ï¿½ï¿½ï¿½Ö¶ï¿½
 										switch (Buffer_Data16)
 											{
 											case 0:
@@ -357,21 +369,21 @@ void UART4_Server_Cmd_Analyse(void)
 														}
 													if(sys_data.Data_10H == 3)
 														{
-															//ÍË³öÊÖ¶¯Ä£Ê½
+															//ï¿½Ë³ï¿½ï¿½Ö¶ï¿½Ä£Ê½
 															sys_data.Data_10H = 0;
 															GetOut_Mannual_Function();
 														}
 
 													break;
-											case 1: //Æô¶¯ÃüÁî
+											case 1: //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 													if(sys_data.Data_10H == 0)
 														{
 															sys_start_cmd();
 														}
 
 													break;
-											case 3://ÊÖ¶¯Ä£Ê½
-													//Ö»ÄÜÔÚ´ı»úÇé¿öÏÂ½øÈëÊÖ¶¯
+											case 3://ï¿½Ö¶ï¿½Ä£Ê½
+													//Ö»ï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½
 													if(sys_data.Data_10H == 0)
 														{
 															GetOut_Mannual_Function();
@@ -384,20 +396,20 @@ void UART4_Server_Cmd_Analyse(void)
 											}
 										
 
-										Data1 = U4_Inf.RX_Data[9]*256 + U4_Inf.RX_Data[10];  //¹ÊÕÏ¸´Î»Ö¸Áî
+										Data1 = U4_Inf.RX_Data[9]*256 + U4_Inf.RX_Data[10];  //ï¿½ï¿½ï¿½Ï¸ï¿½Î»Ö¸ï¿½ï¿½
 										if(Data1 == OK)
 											{
-												sys_flag.Error_Code = 0; //¹ÊÕÏ¸´Î»
+												sys_flag.Error_Code = 0; //ï¿½ï¿½ï¿½Ï¸ï¿½Î»
 												
 											}
 
 									
-										Data1 = U4_Inf.RX_Data[15]*256 + U4_Inf.RX_Data[16];  //5 ¼ÌµçÆ÷16Â·¿ØÖÆ£¬°´Î»»ñÈ¡
+										Data1 = U4_Inf.RX_Data[15]*256 + U4_Inf.RX_Data[16];  //5 ï¿½Ìµï¿½ï¿½ï¿½16Â·ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½Î»ï¿½ï¿½È¡
 										if(sys_data.Data_10H == 3)
 											{
-												//ÔÚÊÖ¶¯Ä£Ê½ÏÂ£¬¸ù¾İ±êÖ¾Î»¿ªÏàÓ¦µÄ¼ÌµçÆ÷
+												//ï¿½ï¿½ï¿½Ö¶ï¿½Ä£Ê½ï¿½Â£ï¿½ï¿½ï¿½ï¿½İ±ï¿½Ö¾Î»ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Ä¼Ìµï¿½ï¿½ï¿½
 												
-												if(Data1 & 0x0001)   //·ç»ú±êÖ¾Î»
+												if(Data1 & 0x0001)   //ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾Î»
 													{
 														
 														Send_Air_Open();
@@ -409,7 +421,7 @@ void UART4_Server_Cmd_Analyse(void)
 														 
 													}
 
-												if(Data1 & 0x0002)   //Ë®±Ã£¬²¹Ë®·§±êÖ¾Î»
+												if(Data1 & 0x0002)   //Ë®ï¿½Ã£ï¿½ï¿½ï¿½Ë®ï¿½ï¿½ï¿½ï¿½Ö¾Î»
 													{
 														Feed_Main_Pump_ON();
 														Second_Water_Valve_Open();
@@ -420,7 +432,7 @@ void UART4_Server_Cmd_Analyse(void)
 														 Second_Water_Valve_Close();
 													}
 
-												if(Data1 & 0x0004)   //ÅÅË®·§
+												if(Data1 & 0x0004)   //ï¿½ï¿½Ë®ï¿½ï¿½
 													{
 														Pai_Wu_Door_Open();
 													}
@@ -428,7 +440,7 @@ void UART4_Server_Cmd_Analyse(void)
 													{
 														Pai_Wu_Door_Close();
 													}
-												if(Data1 & 0x0008)   //Ã÷»ğ·§
+												if(Data1 & 0x0008)   //ï¿½ï¿½ï¿½ï¿½
 													{
 														WTS_Gas_One_Open();
 													}
@@ -442,7 +454,7 @@ void UART4_Server_Cmd_Analyse(void)
 											}
 
 										
-										//·ç»úµÄ¹¦ÂÊ´«Êä£¬·ÖÉè±¸×´Ì¬
+										//ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½Ê´ï¿½ï¿½ä£¬ï¿½ï¿½ï¿½è±¸×´Ì¬
 										if(sys_data.Data_10H  ==  3)
 											{
 												if(U4_Inf.RX_Data[14] <= 100)
@@ -453,7 +465,7 @@ void UART4_Server_Cmd_Analyse(void)
 
 										if(sys_data.Data_10H == 2)
 											{
-												//ÔÚÔËĞĞÖĞ£¬ÇÒÓĞ»ğÑæ
+												//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ£ï¿½ï¿½ï¿½ï¿½Ğ»ï¿½ï¿½ï¿½
 												if(sys_flag.flame_state == FLAME_OK)
 													{
 														if(U4_Inf.RX_Data[14] <= 100)
@@ -471,12 +483,12 @@ void UART4_Server_Cmd_Analyse(void)
 													}
 											}
 
-										//ÔÚ´ı»ú¹ı³ÌÖĞ£¬·ç»úĞèÒª±£³ÖÒ»¶¨¹¦ÂÊÔËĞĞµÄÆô¶¯ĞÅºÅ
+										//ï¿½Ú´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½
 										sys_flag.Idle_AirWork_Flag = U4_Inf.RX_Data[18];
 										
 										if(sys_flag.Paiwu_Flag == 0)
 											{
-												//·ÀÖ¹£¬ÒÑ¾­½ÓÊÕµ½Ö¸Áî£¬¼¸ÃëÖÖºóÓÖ±»Çå³ı
+												//ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½Õµï¿½Ö¸ï¿½î£¬ï¿½ï¿½ï¿½ï¿½ï¿½Öºï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½
 												sys_flag.Paiwu_Flag = U4_Inf.RX_Data[20];
 											}
 										
@@ -531,7 +543,7 @@ void UART4_Server_Cmd_Analyse(void)
 		
 
 										
-										Data1 = U4_Inf.RX_Data[33]*256 + U4_Inf.RX_Data[34];  //±¾ÌåÎÂ¶ÈµÄ±£»¤Öµ
+										Data1 = U4_Inf.RX_Data[33]*256 + U4_Inf.RX_Data[34];  //ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ÈµÄ±ï¿½ï¿½ï¿½Öµ
 										if(Sys_Admin.Inside_WenDu_ProtectValue != Data1)
 											{
 												if(Data1 > 240 && Data1 <= 350 )
@@ -570,7 +582,7 @@ void UART4_Server_Cmd_Analyse(void)
 
 
 			default:
-					//ÎŞĞ§Ö¸Áî
+					//ï¿½ï¿½Ğ§Ö¸ï¿½ï¿½
 					break;
 		}
  }
@@ -584,14 +596,14 @@ uint8 ModuBus4RTU_WriteResponse(uint16 address,uint16 Data16)
 	U4_Inf.TX_Data[1]= 0x06;
 
 	
-	U4_Inf.TX_Data[2] = address >> 8;    // µØÖ·¸ß×Ö½Ú
-	U4_Inf.TX_Data[3] = address & 0x00FF;  //µØÖ·µÍ×Ö½Ú
+	U4_Inf.TX_Data[2] = address >> 8;    // ï¿½ï¿½Ö·ï¿½ï¿½ï¿½Ö½ï¿½
+	U4_Inf.TX_Data[3] = address & 0x00FF;  //ï¿½ï¿½Ö·ï¿½ï¿½ï¿½Ö½ï¿½
 	
 
-	U4_Inf.TX_Data[4] = Data16 >> 8;  //Êı¾İ¸ß×Ö½Ú
-	U4_Inf.TX_Data[5] = Data16 & 0x00FF;   //Êı¾İµÍ×Ö½Ú
+	U4_Inf.TX_Data[4] = Data16 >> 8;  //ï¿½ï¿½ï¿½İ¸ï¿½ï¿½Ö½ï¿½
+	U4_Inf.TX_Data[5] = Data16 & 0x00FF;   //ï¿½ï¿½ï¿½İµï¿½ï¿½Ö½ï¿½
 
-	check_sum  = ModBusCRC16(U4_Inf.TX_Data,8);   //Õâ¸ö¸ù¾İ×Ü×Ö½ÚÊı¸Ä±ä
+	check_sum  = ModBusCRC16(U4_Inf.TX_Data,8);   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½
 	U4_Inf.TX_Data[6]  = check_sum >> 8 ;
 	U4_Inf.TX_Data[7]  = check_sum & 0x00FF;
 
@@ -661,14 +673,14 @@ uint8 ModuBus4_Write0x10Response(uint8 Target_Address,uint16 Data_address,uint16
 	U4_Inf.TX_Data[1]= 0x10;
 
 	
-	U4_Inf.TX_Data[2] = Data_address >> 8;    // µØÖ·¸ß×Ö½Ú
-	U4_Inf.TX_Data[3] = Data_address & 0x00FF;  //µØÖ·µÍ×Ö½Ú
+	U4_Inf.TX_Data[2] = Data_address >> 8;    // ï¿½ï¿½Ö·ï¿½ï¿½ï¿½Ö½ï¿½
+	U4_Inf.TX_Data[3] = Data_address & 0x00FF;  //ï¿½ï¿½Ö·ï¿½ï¿½ï¿½Ö½ï¿½
 	
 
-	U4_Inf.TX_Data[4] = Data16 >> 8;  //Êı¾İ¸ß×Ö½Ú
-	U4_Inf.TX_Data[5] = Data16 & 0x00ff;   //Êı¾İµÍ×Ö½Ú
+	U4_Inf.TX_Data[4] = Data16 >> 8;  //ï¿½ï¿½ï¿½İ¸ï¿½ï¿½Ö½ï¿½
+	U4_Inf.TX_Data[5] = Data16 & 0x00ff;   //ï¿½ï¿½ï¿½İµï¿½ï¿½Ö½ï¿½
 
-	check_sum  = ModBusCRC16(U4_Inf.TX_Data,8);   //Õâ¸ö¸ù¾İ×Ü×Ö½ÚÊı¸Ä±ä
+	check_sum  = ModBusCRC16(U4_Inf.TX_Data,8);   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½
 	U4_Inf.TX_Data[6]  = check_sum >> 8 ;
 	U4_Inf.TX_Data[7]  = check_sum & 0x00FF;
 
@@ -690,19 +702,19 @@ void Union_ModBus_Uart4_Local_Communication(void)
 
 		for(i = 1; i < 13; i++)
 			{
-				if(SlaveG[i].Send_Flag > 20)//·¢ËÍ6´ÎÎ´»ØÓ¦£¬ÔòÊ§Áª
+				if(SlaveG[i].Send_Flag > 20)//ï¿½ï¿½ï¿½ï¿½6ï¿½ï¿½Î´ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½
 					{
 						SlaveG[i].Alive_Flag = FALSE;
-						JiZu[i].Slave_D.Device_State = 0;   //Ò»»áÒÆÖ²µ½Íâ²¿È¥
-						memset(&JiZu[i].Datas,0,sizeof(JiZu[i].Datas)); //È»ºó¶ÔÊı¾İÇåÁã
+						JiZu[i].Slave_D.Device_State = 0;   //Ò»ï¿½ï¿½ï¿½ï¿½Ö²ï¿½ï¿½ï¿½â²¿È¥
+						memset(&JiZu[i].Datas,0,sizeof(JiZu[i].Datas)); //È»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 					}
 			}
 		
 		
 		if(U4_Inf.Recive_Ok_Flag)
 			{
-				U4_Inf.Recive_Ok_Flag = 0;//²»ÄÜÉÙÅ¶
-				 //¹Ø±ÕÖĞ¶Ï
+				U4_Inf.Recive_Ok_Flag = 0;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¶
+				 //ï¿½Ø±ï¿½ï¿½Ğ¶ï¿½
 				USART_ITConfig(UART4, USART_IT_RXNE, DISABLE); 
 				 
 				checksum  = U4_Inf.RX_Data[U4_Inf.RX_Length - 2] * 256 + U4_Inf.RX_Data[U4_Inf.RX_Length - 1];
@@ -712,10 +724,10 @@ void Union_ModBus_Uart4_Local_Communication(void)
 					{
 						Target_Address = U4_Inf.RX_Data[0];
 
-						/**********************¼ì²éËø»úÔËĞĞµÄÊıÁ¿***************************************/
+						/**********************ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğµï¿½ï¿½ï¿½ï¿½ï¿½***************************************/
 						if(AUnionD.OFFlive_Numbers)
 							{
-								//µ±ÓĞ½ûÖ¹Éè±¸µÄÊıÁ¿Ê±£¬Ğ¡ÓÚ½ûÖ¹ÊıÁ¿£¬Ôò²»Í¨ĞÅ
+								//ï¿½ï¿½ï¿½Ğ½ï¿½Ö¹ï¿½è±¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½Ğ¡ï¿½Ú½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½
 								if(Target_Address > AUnionD.OFFlive_Numbers)
 									{
 										Modbus4_UnionRx_DataProcess(U4_Inf.RX_Data[1],Target_Address);
@@ -732,11 +744,11 @@ void Union_ModBus_Uart4_Local_Communication(void)
 					
 			 
 				
-			//¶Ô½ÓÊÕ»º³åÆ÷ÇåÁã
+			//ï¿½Ô½ï¿½ï¿½Õ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				for( i = 0; i < 200;i++ )
 					U4_Inf.RX_Data[i] = 0x00;
 			
-			//ÖØĞÂ¿ªÆôÖĞ¶Ï
+			//ï¿½ï¿½ï¿½Â¿ï¿½ï¿½ï¿½ï¿½Ğ¶ï¿½
 				USART_ITConfig(UART4, USART_IT_RXNE, ENABLE); 
 				
 			}
@@ -748,7 +760,7 @@ uint8 Union_Modbus4_UnionTx_Communication(void)
 	static uint8 Address = 1;
 	uint8 Max_Adress = 0;
 	//	SlaveG[1].Alive_Flag  
-	//	JiZu[1].Slave_D.Device_State  //ÕâÓÃÓÚ¸úÆÁÊı¾İµÄÍ¬²½
+	//	JiZu[1].Slave_D.Device_State  //ï¿½ï¿½ï¿½ï¿½ï¿½Ú¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İµï¿½Í¬ï¿½ï¿½
 	if(AUnionD.Max_Address == 0)
 		{
 			Max_Adress = 4;
@@ -873,39 +885,39 @@ uint8 Modbus4_UnionRx_DataProcess(uint8 Cmd,uint8 address)
 		uint16 Data_Address = 0;
 		uint16 Buffer_Data = 0;
 		float  Buffer_Float = 0;
-	//½ÓÊÕµ½´Ó»úµÄÊı¾İ½øĞĞ´¦Àí
+	//ï¿½ï¿½ï¿½Õµï¿½ï¿½Ó»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ½ï¿½ï¿½Ğ´ï¿½ï¿½ï¿½
 		
-	SlaveG[address].Send_Flag = 0;  //Çå³ş·¢ËÍ±êÖ¾
+	SlaveG[address].Send_Flag = 0;  //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í±ï¿½Ö¾
 	SlaveG[address].Alive_Flag = OK;
 	if(Cmd == 0x03)
 		{
 			Data_Length = U4_Inf.RX_Data[2];
 
-			if(Data_Length == 36)  //Ò»´Î¶ÁÈ¡18¸öÊı¾İ
+			if(Data_Length == 36)  //Ò»ï¿½Î¶ï¿½È¡18ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				{
-					if(SlaveG[address].Startclose_Sendflag == 0) //½â¾öÃüÁîÏÂ·¢ºÍÊµ¼Ê²»Ò»ÖÂ£¬µÈ·¢ËÍ´ÎÊıÍê³É
+					if(SlaveG[address].Startclose_Sendflag == 0) //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½Êµï¿½Ê²ï¿½Ò»ï¿½Â£ï¿½ï¿½È·ï¿½ï¿½Í´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 						{
-							//if(U4_Inf.RX_Data[4]  == 2)   //Æô¶¯»ò´ı»úµÄ±êÖ¾
+							//if(U4_Inf.RX_Data[4]  == 2)   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½Ö¾
 							//	JiZu[address].Slave_D.StartFlag = OK;
 							//else
 							//	JiZu[address].Slave_D.StartFlag = 0;  
 						}
 					
 
-					if(SlaveG[address].Send_Flag > 20)//·¢ËÍ6´ÎÎ´»ØÓ¦£¬ÔòÊ§Áª
+					if(SlaveG[address].Send_Flag > 20)//ï¿½ï¿½ï¿½ï¿½6ï¿½ï¿½Î´ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½
 						{
-							JiZu[address].Slave_D.Device_State = 0;   //Ò»»áÒÆÖ²µ½Íâ²¿È¥
+							JiZu[address].Slave_D.Device_State = 0;   //Ò»ï¿½ï¿½ï¿½ï¿½Ö²ï¿½ï¿½ï¿½â²¿È¥
 						}
 					else
 						{
 							if(U4_Inf.RX_Data[4]  == 2)
-								JiZu[address].Slave_D.Device_State = 2;  //ËÄÖÖ×´Ì¬µÄÇĞ»»
+								JiZu[address].Slave_D.Device_State = 2;  //ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½Ğ»ï¿½
 							if(U4_Inf.RX_Data[4]  == 0 )
-								JiZu[address].Slave_D.Device_State = 1;  //´ı»úÄ£Ê½
-							if(U4_Inf.RX_Data[16])  //¹ÊÕÏÏÔÊ¾
-								JiZu[address].Slave_D.Device_State = 3; //¹ÊÕÏ×´Ì¬
+								JiZu[address].Slave_D.Device_State = 1;  //ï¿½ï¿½ï¿½ï¿½Ä£Ê½
+							if(U4_Inf.RX_Data[16])  //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾
+								JiZu[address].Slave_D.Device_State = 3; //ï¿½ï¿½ï¿½ï¿½×´Ì¬
 							if(U4_Inf.RX_Data[4]  == 3)
-								JiZu[address].Slave_D.Device_State = 1;//ÊÖ¶¯×´Ì¬
+								JiZu[address].Slave_D.Device_State = 1;//ï¿½Ö¶ï¿½×´Ì¬
 						}
 
 					
@@ -924,28 +936,28 @@ uint8 Modbus4_UnionRx_DataProcess(uint8 Cmd,uint8 address)
 					JiZu[address].Slave_D.Inside_WenDu = U4_Inf.RX_Data[13] * 256  + U4_Inf.RX_Data[14]; 
 
 					 
-					JiZu[address].Slave_D.Error_Code = U4_Inf.RX_Data[16] ;//»ñÈ¡¹ÊÕÏ´úÂë
+					JiZu[address].Slave_D.Error_Code = U4_Inf.RX_Data[16] ;//ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ï´ï¿½ï¿½ï¿½
 					
 					
 					if(JiZu[address].Slave_D.Error_Code == 0)
 						{
-							JiZu[address].Slave_D.Error_Reset = 0;  //Ã»ÓĞ¹ÊÕÏÊ±£¬È¡Ïû¸´Î»ÃüÁî
+							JiZu[address].Slave_D.Error_Reset = 0;  //Ã»ï¿½Ğ¹ï¿½ï¿½ï¿½Ê±ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½
 						}
 
 					
 
 					JiZu[address].Slave_D.Flame = U4_Inf.RX_Data[18] ;
 
-					JiZu[address].Slave_D.Fan_Rpm = U4_Inf.RX_Data[19] * 256  + U4_Inf.RX_Data[20];  //»ñÈ¡·ç»úµÄ×ªËÙ
+					JiZu[address].Slave_D.Fan_Rpm = U4_Inf.RX_Data[19] * 256  + U4_Inf.RX_Data[20];  //ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½
 
 
 						
 					
 					Buffer_Float = U4_Inf.RX_Data[21] * 256 + U4_Inf.RX_Data[22];
-					//JiZu[address].Slave_D.Dpressure = Buffer_Float / 100;  //Ïà±ä¸ßÑ¹²à
+					//JiZu[address].Slave_D.Dpressure = Buffer_Float / 100;  //ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½
 
 					 
-					JiZu[address].Slave_D.Power = U4_Inf.RX_Data[24] ;//9·ç»ú¹¦ÂÊ
+					JiZu[address].Slave_D.Power = U4_Inf.RX_Data[24] ;//9ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 					JiZu[address].Slave_D.Pump_State = U4_Inf.RX_Data[28] ;
 					
@@ -956,9 +968,9 @@ uint8 Modbus4_UnionRx_DataProcess(uint8 Cmd,uint8 address)
 
 					if(SlaveG[address].Paiwu_Flag)
 						{
-							if(U4_Inf.RX_Data[36]) //¸÷»ú×é·´À¡µÄÊÇ·ñÔÚÅÅÎÛµÄ±êÖ¾
+							if(U4_Inf.RX_Data[36]) //ï¿½ï¿½ï¿½ï¿½ï¿½é·´ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÛµÄ±ï¿½Ö¾
 								{
-									SlaveG[address].Paiwu_Flag = 0; //Ôò²»ÔÙ·¢ËÍÒª½øĞĞÅÅÎÛµÄÖ¸Áî
+									SlaveG[address].Paiwu_Flag = 0; //ï¿½ï¿½ï¿½Ù·ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ûµï¿½Ö¸ï¿½ï¿½
 								}
 						}
 					
@@ -974,7 +986,7 @@ uint8 Modbus4_UnionRx_DataProcess(uint8 Cmd,uint8 address)
 				Data_Address = U4_Inf.RX_Data[2]*256 + U4_Inf.RX_Data[3] ;
 				if(Data_Address == 0x00C8)
 					{
-						SlaveG[address].Command_SendFlag = 0; //½«ÏàÓ¦µÄ±êÖ¾Î»È¡Ïû
+						SlaveG[address].Command_SendFlag = 0; //ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Ä±ï¿½Ö¾Î»È¡ï¿½ï¿½
 					}
 
 				
@@ -989,8 +1001,8 @@ uint8 Modbus4_UnionRx_DataProcess(uint8 Cmd,uint8 address)
 
 uint8 ModBus4RTU_Write0x10Function(uint8 Target_Address,uint16 Data_Address,uint16 Length)
 {
-	//01  10  00 A4	00 02  04  00 0F 3D DD 18 EE Ğ´32Î»Êı¾İÖ¸Áî¸ñÊ½
-	//ÏìÓ¦£º 01 10 00 A4	  00 02 crc
+	//01  10  00 A4	00 02  04  00 0F 3D DD 18 EE Ğ´32Î»ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½Ê½
+	//ï¿½ï¿½Ó¦ï¿½ï¿½ 01 10 00 A4	  00 02 crc
 		uint16 Check_Sum = 0;
 		U4_Inf.TX_Data[0] = Target_Address;
 		U4_Inf.TX_Data[1] = 0x10;
@@ -1001,62 +1013,62 @@ uint8 ModBus4RTU_Write0x10Function(uint8 Target_Address,uint16 Data_Address,uint
 		U4_Inf.TX_Data[4]= Length >> 8;
 		U4_Inf.TX_Data[5]= Length & 0x00FF;
 
-		U4_Inf.TX_Data[6]= Length * 2;  //×Ü×Ö½ÚÊı
+		U4_Inf.TX_Data[6]= Length * 2;  //ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½
 
 		U4_Inf.TX_Data[7]= 0;
-		U4_Inf.TX_Data[8]= JiZu[Target_Address].Slave_D.StartFlag;  //1Æô¶¯»ò¹Ø±ÕÃüÁî
+		U4_Inf.TX_Data[8]= JiZu[Target_Address].Slave_D.StartFlag;  //1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½
 
 		U4_Inf.TX_Data[9]= 0;
-		U4_Inf.TX_Data[10]= JiZu[Target_Address].Slave_D.Error_Reset;  //2¹ÊÕÏ¸´Î»ÃüÁî
+		U4_Inf.TX_Data[10]= JiZu[Target_Address].Slave_D.Error_Reset;  //2ï¿½ï¿½ï¿½Ï¸ï¿½Î»ï¿½ï¿½ï¿½ï¿½
 
 		U4_Inf.TX_Data[11]= 0;
-		U4_Inf.TX_Data[12]= AUnionD.Devive_Style;  // 3Éè±¸ÀàĞÍ 
+		U4_Inf.TX_Data[12]= AUnionD.Devive_Style;  // 3ï¿½è±¸ï¿½ï¿½ï¿½ï¿½ 
 
 		
 		U4_Inf.TX_Data[13]= 0;
-		U4_Inf.TX_Data[14]= SlaveG[Target_Address].Out_Power;	//4 Éè±¸ĞèÒªÔËĞĞµÄ¹¦ÂÊ
+		U4_Inf.TX_Data[14]= SlaveG[Target_Address].Out_Power;	//4 ï¿½è±¸ï¿½ï¿½Òªï¿½ï¿½ï¿½ĞµÄ¹ï¿½ï¿½ï¿½
 
 		U4_Inf.TX_Data[15]= JiZu[Target_Address].Slave_D.Realys_Out >> 8;
-		U4_Inf.TX_Data[16]= JiZu[Target_Address].Slave_D.Realys_Out & 0x00FF;	//5 ¼ÌµçÆ÷16Â·¿ØÖÆ£¬°´Î»»ñÈ¡
+		U4_Inf.TX_Data[16]= JiZu[Target_Address].Slave_D.Realys_Out & 0x00FF;	//5 ï¿½Ìµï¿½ï¿½ï¿½16Â·ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½Î»ï¿½ï¿½È¡
 
 		U4_Inf.TX_Data[17]= 0;
-		U4_Inf.TX_Data[18]= SlaveG[Target_Address].Idle_AirWork_Flag;	//6 ·ç»ú´ı»úÆô¶¯ĞÅºÅ
+		U4_Inf.TX_Data[18]= SlaveG[Target_Address].Idle_AirWork_Flag;	//6 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½
 
 		U4_Inf.TX_Data[19]= 0;
-		U4_Inf.TX_Data[20]= SlaveG[Target_Address].Paiwu_Flag;	//7 ×Ô¶¯ÅÅÎÛ¿ØÖÆÃüÁî
+		U4_Inf.TX_Data[20]= SlaveG[Target_Address].Paiwu_Flag;	//7 ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Û¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 		U4_Inf.TX_Data[21]= 0;
-		U4_Inf.TX_Data[22]= sys_config_data.zhuan_huan_temperture_value;	//8 Ä¿±êÑ¹Á¦
+		U4_Inf.TX_Data[22]= sys_config_data.zhuan_huan_temperture_value;	//8 Ä¿ï¿½ï¿½Ñ¹ï¿½ï¿½
 
 		U4_Inf.TX_Data[23]= 0;
-		U4_Inf.TX_Data[24]= sys_config_data.Auto_stop_pressure;	//9 Í£»úÑ¹Á¦
+		U4_Inf.TX_Data[24]= sys_config_data.Auto_stop_pressure;	//9 Í£ï¿½ï¿½Ñ¹ï¿½ï¿½
 
 		U4_Inf.TX_Data[25]= 0;
-		U4_Inf.TX_Data[26]= sys_config_data.Auto_start_pressure;	//10 Æô¶¯Ñ¹Á¦
+		U4_Inf.TX_Data[26]= sys_config_data.Auto_start_pressure;	//10 ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½
 
 		U4_Inf.TX_Data[27]= 0;
-		U4_Inf.TX_Data[28]= Sys_Admin.DeviceMaxPressureSet;	//11¶î¶¨Ñ¹Á¦
+		U4_Inf.TX_Data[28]= Sys_Admin.DeviceMaxPressureSet;	//11ï¿½î¶¨Ñ¹ï¿½ï¿½
 
 		U4_Inf.TX_Data[29]= 0;
-		U4_Inf.TX_Data[30]= JiZu[Target_Address].Slave_D.DianHuo_Value;	//12 µã»ğ¹¦ÂÊ
+		U4_Inf.TX_Data[30]= JiZu[Target_Address].Slave_D.DianHuo_Value;	//12 ï¿½ï¿½ï¿½ï¿½ï¿½
 
 		U4_Inf.TX_Data[31]= 0;
-		U4_Inf.TX_Data[32]= JiZu[Target_Address].Slave_D.Max_Power;	//13 ×î´óÔËĞĞ¹¦ÂÊ
+		U4_Inf.TX_Data[32]= JiZu[Target_Address].Slave_D.Max_Power;	//13 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ¹ï¿½ï¿½ï¿½
 
 		U4_Inf.TX_Data[33]= JiZu[Target_Address].Slave_D.Inside_WenDu_Protect >> 8;
-		U4_Inf.TX_Data[34]= JiZu[Target_Address].Slave_D.Inside_WenDu_Protect & 0x00FF;	//14 Â¯ÎÂ±£»¤Öµ
+		U4_Inf.TX_Data[34]= JiZu[Target_Address].Slave_D.Inside_WenDu_Protect & 0x00FF;	//14 Â¯ï¿½Â±ï¿½ï¿½ï¿½Öµ
 
 		U4_Inf.TX_Data[35]= 0;
-		U4_Inf.TX_Data[36]= sys_flag.DianHuo_Alive;	//15 Ô¤Áô²ÎÊı2    ¿ØÖÆµã»ğ¹ı³ÌÖĞ£¬ÔÚÔËĞĞÊ±£¬ĞèÒª¿ØÖÆ×î´ó¹¦ÂÊ
+		U4_Inf.TX_Data[36]= sys_flag.DianHuo_Alive;	//15 Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½2    ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 		U4_Inf.TX_Data[37]= 0;
-		U4_Inf.TX_Data[38]= 0;	//16 Ô¤Áô²ÎÊı3
+		U4_Inf.TX_Data[38]= 0;	//16 Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½3
 
 		U4_Inf.TX_Data[39]= 0;
-		U4_Inf.TX_Data[40]= 0;	//17 Ô¤Áô²ÎÊı4
+		U4_Inf.TX_Data[40]= 0;	//17 Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½4
 
 		U4_Inf.TX_Data[41]= 0;
-		U4_Inf.TX_Data[42]= 0;	//18 Ô¤Áô²ÎÊı5
+		U4_Inf.TX_Data[42]= 0;	//18 Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½5
 		
 		Check_Sum = ModBusCRC16(U4_Inf.TX_Data,45);
 		U4_Inf.TX_Data[43]= Check_Sum >> 8;
@@ -1075,32 +1087,32 @@ uint8 JiZu_ReadAndWrite_Function(uint8 address)
 		
 		static uint8 index  = 0;
 		uint8 return_value = 0;
-		static uint8 Write_Index = 0; //ÓÃÓÚÇĞ»»²»Í¬µÄÃüÁî
+		static uint8 Write_Index = 0; //ï¿½ï¿½ï¿½ï¿½ï¿½Ğ»ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		
 		switch (index)
 			{
 			case 0:
 					if(SlaveG[address].Alive_Flag == 0)
 						{
-							//Èç¹ûÉè±¸²»ÔÚÏß£¬ÔòÖ»±£³Ö¶ÁµÄ×´Ì¬
+							//ï¿½ï¿½ï¿½ï¿½è±¸ï¿½ï¿½ï¿½ï¿½ï¿½ß£ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½×´Ì¬
 							SlaveG[address].Send_Index = 0;
 						}
 					
 					if(SlaveG[address].Send_Index)
 						{
-							//SlaveG[address].Command_SendFlag--; //¶Ô·¢ËÍ´ÎÊıµİ¼õ
+							//SlaveG[address].Command_SendFlag--; //ï¿½Ô·ï¿½ï¿½Í´ï¿½ï¿½ï¿½ï¿½İ¼ï¿½
 							
 							SlaveG[address].Send_Index = 0;
-							ModBus4RTU_Write0x10Function(address,200,18);//18¸öÊı¾İÒ»´ÎĞÔĞ´Èë
+							ModBus4RTU_Write0x10Function(address,200,18);//18ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ğ´ï¿½ï¿½
 						}
 					else
 						{
 							SlaveG[address].Send_Index  = OK;
-							ModBus4_RTU_Read03(address,100,18); //Õâ¸öÊÇÄ¬ÈÏ¶ÁÈ¡Êı¾İµÄÖ¸Áî
+							ModBus4_RTU_Read03(address,100,18); //ï¿½ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½Ï¶ï¿½È¡ï¿½ï¿½ï¿½İµï¿½Ö¸ï¿½ï¿½
 							
 						}
 									
-					SlaveG[address].Send_Flag ++; //¶Ô·¢ËÍ½øĞĞ¼ÆÊı
+					SlaveG[address].Send_Flag ++; //ï¿½Ô·ï¿½ï¿½Í½ï¿½ï¿½Ğ¼ï¿½ï¿½ï¿½
 					U4_Inf.Flag_100ms = 0;
 					
 					index++;

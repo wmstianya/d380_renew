@@ -113,15 +113,8 @@ static void uartUsartConfig(UartHandle* handle)
 {
     USART_InitTypeDef usartInit;
     
-    /* 使能USART时钟 - USART1在APB2, 其他(USART2/3, UART4/5)在APB1 */
-    if (handle->config.usartx == USART1)
-    {
-        RCC_APB2PeriphClockCmd(handle->config.rccUsartPeriph, ENABLE);
-    }
-    else
-    {
-        RCC_APB1PeriphClockCmd(handle->config.rccUsartPeriph, ENABLE);
-    }
+    /* 使能USART时钟 */
+    RCC_APB1PeriphClockCmd(handle->config.rccUsartPeriph, ENABLE);
     
     /* 复位USART */
     USART_DeInit(handle->config.usartx);

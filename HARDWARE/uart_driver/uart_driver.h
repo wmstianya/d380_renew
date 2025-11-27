@@ -3,14 +3,15 @@
  * @brief   统一UART驱动接口定义 - DMA + 双缓冲 + IDLE中断
  * @author  System
  * @date    2025-11-26
- * @version 2.0 (dma-only)
+ * @version 2.1 (dma-only)
  * 
- * @note    本驱动支持USART2/USART3，使用DMA接收和发送
+ * @note    本驱动支持USART1/USART2/USART3/UART4，使用DMA接收和发送
  *          通过IDLE中断检测帧结束，双缓冲保证数据处理期间不丢失
  * 
  * @warning 此版本为DMA专用版本，已移除旧的逐字节中断驱动支持
  * 
  * 修订历史:
+ * - 2.1 (2025-11-27): 添加USART1和UART4的DMA支持
  * - 2.0 (2025-11-27): dma-only分支，移除旧驱动条件编译
  * - 1.0 (2025-11-26): 初始版本，支持DMA+IDLE+双缓冲
  */
@@ -119,11 +120,17 @@ typedef struct {
 /*                              外部变量声明                                  */
 /*============================================================================*/
 
+/** @brief USART1驱动句柄 (调试/RTU服务器通信) */
+extern UartHandle uartDebugHandle;
+
 /** @brief USART2驱动句柄 (显示屏通信) */
 extern UartHandle uartDisplayHandle;
 
 /** @brief USART3驱动句柄 (主从机通信) */
 extern UartHandle uartSlaveHandle;
+
+/** @brief UART4驱动句柄 (联控通信) */
+extern UartHandle uartUnionHandle;
 
 
 /*============================================================================*/
@@ -225,8 +232,17 @@ void uartRegisterRxCallback(UartHandle* handle, UartRxCallback callback);
 
 
 /*============================================================================*/
-/*                         USART2/USART3专用初始化函数                        */
+/*                         各串口专用初始化函数                               */
 /*============================================================================*/
+
+/**
+ * @brief  初始化USART1 (调试/RTU服务器通信)
+ * @param  baudRate: 波特率 (默认9600)
+ * @retval UART_OK: 成功
+ * @note   使用DMA1_Channel5(RX)/DMA1_Channel4(TX)
+ */
+uint8_t uartDebugInit(uint32_t baudRate);
+
 
 /**
  * @brief  初始化USART2 (显示屏通信)
@@ -244,6 +260,15 @@ uint8_t uartDisplayInit(uint32_t baudRate);
  * @note   使用DMA1_Channel3(RX)/DMA1_Channel2(TX)
  */
 uint8_t uartSlaveInit(uint32_t baudRate);
+
+
+/**
+ * @brief  初始化UART4 (联控通信)
+ * @param  baudRate: 波特率 (默认9600)
+ * @retval UART_OK: 成功
+ * @note   使用DMA2_Channel3(RX)/DMA2_Channel5(TX)
+ */
+uint8_t uartUnionInit(uint32_t baudRate);
 
 
 #endif /* __UART_DRIVER_H */

@@ -465,14 +465,6 @@ void UART5_IRQHandler(void)  //����5�жϷ������
 
 
 /**
- * @brief  DMA1通道4中断处理 - USART1发送完成
- */
-void DMA1_Channel4_IRQHandler(void)
-{
-    uartDmaTxIrqHandler(&uartDebugHandle);
-}
-
-/**
  * @brief  DMA1通道7中断处理 - USART2发送完成
  */
 void DMA1_Channel7_IRQHandler(void)
@@ -486,19 +478,6 @@ void DMA1_Channel7_IRQHandler(void)
 void DMA1_Channel2_IRQHandler(void)
 {
     uartDmaTxIrqHandler(&uartSlaveHandle);
-}
-
-/**
- * @brief  DMA2通道4/5中断处理 - UART4发送完成
- * @note   DMA2的Channel4和Channel5共用一个中断向量
- */
-void DMA2_Channel4_5_IRQHandler(void)
-{
-    /* 检查是否是Channel5的中断(UART4 TX) */
-    if (DMA_GetITStatus(DMA2_IT_TC5))
-    {
-        uartDmaTxIrqHandler(&uartUnionHandle);
-    }
 }
 
 

@@ -394,26 +394,48 @@ void USART3_IRQHandler(void)              //串口3中断服务函数
 
 
 
-void UART4_IRQHandler(void)              //串口4中断服务函数
+void UART4_IRQHandler(void)  //����4�жϷ������
 {
-    /* DMA + IDLE中断处理 */
-    uartIdleIrqHandler(&uartUnionHandle);
-    
-    /* 处理错误标志 */
-    if (USART_GetFlagStatus(UART4, USART_FLAG_ORE) == SET)
+	uint8 Res = 0;
+	if(USART_GetITStatus(UART4, USART_IT_RXNE) != RESET)  //�����ж�
+	{
+		USART_ClearITPendingBit(UART4,USART_IT_RXNE); //����жϱ�־
+		Res =USART_ReceiveData(UART4);	//��ȡ���յ�������
+		if(U4_Inf.Rx_temp_length == 0&&U4_Inf.Recive_Ok_Flag == 0)
+		  {
+		  	U4_Inf.RX_Data[0]=Res;
+		  	U4_Inf.Rx_temp_length++;
+		  	U4_Inf.Recive_Flag=1;
+		  	U4_Inf.Recive_Time=0;
+		  }
+  		else if(U4_Inf.Rx_temp_length > 0 && U4_Inf.Recive_Ok_Flag == 0)
+		  {
+		  		if(U4_Inf.Rx_temp_length >250)
+		  			U4_Inf.Rx_temp_length = 0;
+				U4_Inf.RX_Data[U4_Inf.Rx_temp_length]=Res;
+				U4_Inf.Rx_temp_length++;
+				U4_Inf.Recive_Time=0;
+		  }	
+	}
+
+  	if(USART_GetFlagStatus(UART4, USART_FLAG_ORE) == SET)//���ORE��־
+  	{
+  		USART_ClearFlag(UART4,USART_FLAG_ORE);
+		USART_ReceiveData(UART4);
+  	}
+		
+	if (USART_GetFlagStatus(UART4, USART_FLAG_PE) != RESET)
     {
-        USART_ClearFlag(UART4, USART_FLAG_ORE);
+				
         USART_ReceiveData(UART4);
+      	USART_ClearFlag(UART4, USART_FLAG_PE);
     }
-    if (USART_GetFlagStatus(UART4, USART_FLAG_PE) != RESET)
+ 
+ 	if (USART_GetFlagStatus(UART4, USART_FLAG_FE) != RESET)
     {
-        USART_ReceiveData(UART4);
-        USART_ClearFlag(UART4, USART_FLAG_PE);
-    }
-    if (USART_GetFlagStatus(UART4, USART_FLAG_FE) != RESET)
-    {
-        USART_ReceiveData(UART4);
-        USART_ClearFlag(UART4, USART_FLAG_FE);
+				
+       USART_ReceiveData(UART4);
+       USART_ClearFlag(UART4, USART_FLAG_FE);
     }
 }	
 
@@ -465,14 +487,6 @@ void UART5_IRQHandler(void)  //����5�жϷ������
 
 
 /**
- * @brief  DMA1通道4中断处理 - USART1发送完成
- */
-void DMA1_Channel4_IRQHandler(void)
-{
-    uartDmaTxIrqHandler(&uartDebugHandle);
-}
-
-/**
  * @brief  DMA1通道7中断处理 - USART2发送完成
  */
 void DMA1_Channel7_IRQHandler(void)
@@ -486,19 +500,6 @@ void DMA1_Channel7_IRQHandler(void)
 void DMA1_Channel2_IRQHandler(void)
 {
     uartDmaTxIrqHandler(&uartSlaveHandle);
-}
-
-/**
- * @brief  DMA2通道4/5中断处理 - UART4发送完成
- * @note   DMA2的Channel4和Channel5共用一个中断向量
- */
-void DMA2_Channel4_5_IRQHandler(void)
-{
-    /* 检查是否是Channel5的中断(UART4 TX) */
-    if (DMA_GetITStatus(DMA2_IT_TC5))
-    {
-        uartDmaTxIrqHandler(&uartUnionHandle);
-    }
 }
 
 

@@ -1,7 +1,6 @@
 
 	  
 #include "main.h"
-#include "uart_driver.h"
 
  
 
@@ -229,12 +228,12 @@ void ModBus_Communication(void)
 					
 			
 				
-			/* 清空接收缓冲 */
+			//�Խ��ջ���������
 				for( i = 0; i < 100;i++ )
 					U1_Inf.RX_Data[i] = 0x00;
 			
-			/* DMA驱动: 清除接收完成标志 */
-				uartClearRxFlag(&uartDebugHandle);
+			//���¿����ж�
+				USART_ITConfig(USART1, USART_IT_RXNE, ENABLE); 
 				
 			}
 }

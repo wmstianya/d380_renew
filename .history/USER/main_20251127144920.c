@@ -64,11 +64,11 @@ int main(void)
 //*****************SPI初始化**************************//
 	SPI_Config_Init();
 	JTAG_Diable();
-//***************串口1 DMA驱动 for RS485 A1B1 RTU服务器****//
-	uartDebugInit(9600);  //DMA + IDLE中断模式
+//***************串口1初始化为9600 for    RS485A1B1****//
+	uart_init(9600);//优先级2:0
 
 //***************串口2 DMA驱动 for 10.1寸外置的屏*****//
-	uartDisplayInit(115200);  //DMA + IDLE中断模式
+	uartDisplayInit(9600);  //DMA + IDLE中断模式
 //***************串口3 DMA驱动 for 设备内部通信准备******//
 	uartSlaveInit(9600);    //DMA + IDLE中断模式
 
@@ -103,8 +103,8 @@ int main(void)
 	uartTestStartLoopback(&uartDisplayHandle, UART_TEST_COUNT, UART_TEST_PACKET_SIZE);
 #endif
 
-//***************串口4 DMA驱动 for 联控或本地通信****//
-	uartUnionInit(9600);  //DMA + IDLE中断模式	 
+//***************串口4初始化为 联控或者本地通信 ****//
+	uart4_init(9600); //优先级2:2	 
 
 	
 //***配置1ms定时中断,包括全串口接收周期时间配置***//

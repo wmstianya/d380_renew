@@ -113,15 +113,8 @@ static void uartUsartConfig(UartHandle* handle)
 {
     USART_InitTypeDef usartInit;
     
-    /* 使能USART时钟 - USART1在APB2, 其他(USART2/3, UART4/5)在APB1 */
-    if (handle->config.usartx == USART1)
-    {
-        RCC_APB2PeriphClockCmd(handle->config.rccUsartPeriph, ENABLE);
-    }
-    else
-    {
-        RCC_APB1PeriphClockCmd(handle->config.rccUsartPeriph, ENABLE);
-    }
+    /* 使能USART时钟 */
+    RCC_APB1PeriphClockCmd(handle->config.rccUsartPeriph, ENABLE);
     
     /* 复位USART */
     USART_DeInit(handle->config.usartx);
@@ -529,68 +522,5 @@ uint8_t uartSlaveInit(uint32_t baudRate)
     uartSlaveHandle.config.dmaTxIrqChannel= DMA1_Channel2_IRQn;
     
     return uartDriverInit(&uartSlaveHandle);
-}
-
-
-/**
- * @brief  初始化USART1 (调试/RTU服务器通信)
- * @param  baudRate: 波特率
- * @retval UART_OK
- */
-uint8_t uartDebugInit(uint32_t baudRate)
-{
-    /* USART1配置: PA9(TX), PA10(RX), DMA1_CH5(RX), DMA1_CH4(TX) */
-    uartDebugHandle.config.usartx         = USART1;
-    uartDebugHandle.config.baudRate       = baudRate;
-    uartDebugHandle.config.txGpioPort     = GPIOA;
-    uartDebugHandle.config.txGpioPin      = GPIO_Pin_9;
-    uartDebugHandle.config.rxGpioPort     = GPIOA;
-    uartDebugHandle.config.rxGpioPin      = GPIO_Pin_10;
-    uartDebugHandle.config.rccUsartPeriph = RCC_APB2Periph_USART1;  /* USART1在APB2 */
-    uartDebugHandle.config.rccGpioPeriph  = RCC_APB2Periph_GPIOA;
-    uartDebugHandle.config.nvicIrqChannel = USART1_IRQn;
-    uartDebugHandle.config.nvicPrePriority= 2;
-    uartDebugHandle.config.nvicSubPriority= 0;
-    uartDebugHandle.config.dmaRxChannel   = DMA1_Channel5;
-    uartDebugHandle.config.dmaTxChannel   = DMA1_Channel4;
-    uartDebugHandle.config.dmaRxTcFlag    = DMA1_FLAG_TC5;
-    uartDebugHandle.config.dmaTxTcFlag    = DMA1_IT_TC4;
-    uartDebugHandle.config.dmaRxIrqChannel= DMA1_Channel5_IRQn;
-    uartDebugHandle.config.dmaTxIrqChannel= DMA1_Channel4_IRQn;
-    
-    return uartDriverInit(&uartDebugHandle);
-}
-
-
-/**
- * @brief  初始化UART4 (联控通信)
- * @param  baudRate: 波特率
- * @retval UART_OK
- */
-uint8_t uartUnionInit(uint32_t baudRate)
-{
-    /* UART4配置: PC10(TX), PC11(RX), DMA2_CH3(RX), DMA2_CH5(TX) */
-    /* 注意: UART4使用DMA2，需要额外使能DMA2时钟 */
-    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA2, ENABLE);
-    
-    uartUnionHandle.config.usartx         = UART4;
-    uartUnionHandle.config.baudRate       = baudRate;
-    uartUnionHandle.config.txGpioPort     = GPIOC;
-    uartUnionHandle.config.txGpioPin      = GPIO_Pin_10;
-    uartUnionHandle.config.rxGpioPort     = GPIOC;
-    uartUnionHandle.config.rxGpioPin      = GPIO_Pin_11;
-    uartUnionHandle.config.rccUsartPeriph = RCC_APB1Periph_UART4;
-    uartUnionHandle.config.rccGpioPeriph  = RCC_APB2Periph_GPIOC;
-    uartUnionHandle.config.nvicIrqChannel = UART4_IRQn;
-    uartUnionHandle.config.nvicPrePriority= 2;
-    uartUnionHandle.config.nvicSubPriority= 2;
-    uartUnionHandle.config.dmaRxChannel   = DMA2_Channel3;
-    uartUnionHandle.config.dmaTxChannel   = DMA2_Channel5;
-    uartUnionHandle.config.dmaRxTcFlag    = DMA2_FLAG_TC3;
-    uartUnionHandle.config.dmaTxTcFlag    = DMA2_IT_TC5;
-    uartUnionHandle.config.dmaRxIrqChannel= DMA2_Channel3_IRQn;
-    uartUnionHandle.config.dmaTxIrqChannel= DMA2_Channel4_5_IRQn;  /* DMA2_CH4和CH5共用中断 */
-    
-    return uartDriverInit(&uartUnionHandle);
 }
 

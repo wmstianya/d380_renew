@@ -143,15 +143,35 @@ void Union_ModBus2_Communication(void)
 		uint16_t rxLen;
 
 		/* DMA接收: 检查接收完成标志 */
-		if (uartIsRxReady(&uartDisplayHandle))
 		{
-			if (uartGetRxData(&uartDisplayHandle, &rxData, &rxLen) == UART_OK)
+			uint8_t ready = uartIsRxReady(&uartDisplayHandle);
+			/* 调试: 只在状态变化时打印 */
+			static uint8_t lastReady = 0;
+			if (ready != lastReady)
 			{
+				u1_printf("U2Comm: ready=%d\n", ready);
+				lastReady = ready;
+			}
+			
+			if (ready)
+			{
+				if (uartGetRxData(&uartDisplayHandle, &rxData, &rxLen) != UART_OK)
+				{
+					u1_printf("U2Comm: GetRxData FAIL\n");
+					return;
+				}
+				
 				/* 复制数据到U2_Inf以兼容后续代码 */
 				for (i = 0; i < rxLen && i < 300; i++)
 					U2_Inf.RX_Data[i] = rxData[i];
 				U2_Inf.RX_Length = rxLen;
 				U2_Inf.Recive_Ok_Flag = 1;
+				
+				/* 调试: 打印接收到的原始数据 */
+				u1_printf("RX[%d]:", rxLen);
+				for (i = 0; i < rxLen && i < 10; i++)
+					u1_printf(" %02X", U2_Inf.RX_Data[i]);
+				u1_printf("\n");
 			}
 		}
 		
@@ -160,6 +180,13 @@ void Union_ModBus2_Communication(void)
 				U2_Inf.Recive_Ok_Flag = 0;
 				 
 				checksum  = U2_Inf.RX_Data[U2_Inf.RX_Length - 2] * 256 + U2_Inf.RX_Data[U2_Inf.RX_Length - 1];
+				
+				/* 调试: 打印CRC校验信息 */
+				{
+					uint16 calcCrc = ModBusCRC16(U2_Inf.RX_Data, U2_Inf.RX_Length);
+					u1_printf("RX CRC: recv=%04X calc=%04X %s\n", checksum, calcCrc, 
+						(checksum == calcCrc) ? "OK" : "FAIL");
+				}
 			 	
 				if(checksum == ModBusCRC16(U2_Inf.RX_Data,U2_Inf.RX_Length))
 					{	
@@ -1137,6 +1164,8 @@ uint8 Jizu_ReadResponse(uint8 address)
 	checksum  = ModBusCRC16(U2_Inf.TX_Data, Bytes + 5);
 	U2_Inf.TX_Data[Bytes + 3] = checksum >> 8;
 	U2_Inf.TX_Data[Bytes + 4] = checksum & 0x00FF;
+	
+	u1_printf("TX Jizu[%d]: len=%d\n", address, Bytes + 5);  /* 调试 */
 	
 	uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
 

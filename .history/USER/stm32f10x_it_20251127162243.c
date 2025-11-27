@@ -336,27 +336,48 @@ void RTC_IRQHandler(void)
 	  }
 }
 
-void USART1_IRQHandler(void)              //串口1中断服务函数
+void USART1_IRQHandler(void)
 {
-    /* DMA + IDLE中断处理 */
-    uartIdleIrqHandler(&uartDebugHandle);
-    
-    /* 处理错误标志 */
-    if (USART_GetFlagStatus(USART1, USART_FLAG_ORE) == SET)
-    {
-        USART_ClearFlag(USART1, USART_FLAG_ORE);
-        USART_ReceiveData(USART1);
-    }
-    if (USART_GetFlagStatus(USART1, USART_FLAG_PE) != RESET)
-    {
-        USART_ReceiveData(USART1);
-        USART_ClearFlag(USART1, USART_FLAG_PE);
-    }
-    if (USART_GetFlagStatus(USART1, USART_FLAG_FE) != RESET)
-    {
-        USART_ReceiveData(USART1);
-        USART_ClearFlag(USART1, USART_FLAG_FE);
-    }
+	uint8 Res = 0;
+	
+	if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)  //接收中断
+	{
+		USART_ClearITPendingBit(USART1,USART_IT_RXNE);
+		Res = USART_ReceiveData(USART1);
+		if(U1_Inf.Rx_temp_length == 0 && U1_Inf.Recive_Ok_Flag == 0)
+		{
+			U1_Inf.RX_Data[0] = Res;
+			U1_Inf.Rx_temp_length++;
+			U1_Inf.Recive_Flag = 1;
+			U1_Inf.Recive_Time = 0;
+		}
+		else if(U1_Inf.Rx_temp_length > 0 && U1_Inf.Recive_Ok_Flag == 0)
+		{
+			if(U1_Inf.Rx_temp_length > 250)
+				U1_Inf.Rx_temp_length = 0;
+			U1_Inf.RX_Data[U1_Inf.Rx_temp_length] = Res;
+			U1_Inf.Rx_temp_length++;
+			U1_Inf.Recive_Time = 0;
+		}
+	}
+
+	if(USART_GetFlagStatus(USART1, USART_FLAG_ORE) == SET)
+	{
+		USART_ClearFlag(USART1, USART_FLAG_ORE);
+		USART_ReceiveData(USART1);
+	}
+
+	if (USART_GetFlagStatus(USART1, USART_FLAG_PE) != RESET)
+	{
+		USART_ReceiveData(USART1);
+		USART_ClearFlag(USART1, USART_FLAG_PE);
+	}
+
+	if (USART_GetFlagStatus(USART1, USART_FLAG_FE) != RESET)
+	{
+		USART_ReceiveData(USART1);
+		USART_ClearFlag(USART1, USART_FLAG_FE);
+	}
 }
 	
 	

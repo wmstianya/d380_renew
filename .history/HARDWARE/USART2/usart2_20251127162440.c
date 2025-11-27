@@ -1138,6 +1138,8 @@ uint8 Jizu_ReadResponse(uint8 address)
 	U2_Inf.TX_Data[Bytes + 3] = checksum >> 8;
 	U2_Inf.TX_Data[Bytes + 4] = checksum & 0x00FF;
 	
+	u1_printf("TX Jizu[%d]: len=%d\n", address, Bytes + 5);  /* ต๗สิ */
+	
 	uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
 
 		return 0;
