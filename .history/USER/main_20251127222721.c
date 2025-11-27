@@ -123,7 +123,6 @@ int main(void)
 //***************统一ModBus协议层初始化****//
 	modbusUsart3Init();  // USART3 主机模式 (供水阀)
 	modbusUsart1Init();  // USART1 从机模式 (RTU服务器)
-	modbusUsart2Init();  // USART2 从机模式 (10.1寸屏幕)
 #endif
 
 	
@@ -291,12 +290,8 @@ int main(void)
 				case 0: //主控设备
 						//根据设备类型进行切换
 						
-						//***********串口2 10.1 LCD屏幕通信****************//
-#if USE_UNIFIED_MODBUS
-							modbusUsart2Scheduler();  // 统一协议层调度
-#else
+						//***********串口2 A2B210.1 LCD下发命令解析****************//
 							Union_ModBus2_Communication();
-#endif
 						
 						switch (Sys_Admin.Device_Style)
 							{

@@ -828,6 +828,11 @@
               <FileType>1</FileType>
               <FilePath>..\HARDWARE\modbus\modbus_usart1.c</FilePath>
             </File>
+            <File>
+              <FileName>modbus_usart2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\modbus\modbus_usart2.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
