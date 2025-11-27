@@ -24,12 +24,16 @@
 - [ ] 1.3.3 整理轮询的寄存器地址表
 - [ ] 1.3.4 文档化到 `specs/modbus-rtu/usart3-registers.md`
 
-### 1.4 UART4 寄存器梳理 (联控通信)
-- [ ] 1.4.1 分析 `usart4.c` 中 `ModBus_Uart4_Local_Communication()` - 从机模式
-- [ ] 1.4.2 分析 `usart4.c` 中 `Union_Modbus4_UnionTx_Communication()` - 主机模式
-- [ ] 1.4.3 整理从机模式的寄存器地址表
-- [ ] 1.4.4 整理主机模式轮询的寄存器地址表
-- [ ] 1.4.5 文档化到 `specs/modbus-rtu/uart4-registers.md`
+### 1.4 UART4 寄存器梳理 (联控通信) ✅
+- [x] 1.4.1 分析 `usart4.c` 中 `ModBus_Uart4_Local_Communication()` - 从机模式
+- [x] 1.4.2 分析 `usart4.c` 中 `Union_Modbus4_UnionTx_Communication()` - 主机模式
+- [x] 1.4.3 整理从机模式的寄存器地址表
+  - 03响应: 地址100, 返回18寄存器(36字节)本机状态
+  - 10处理: 地址0xC8, 接收启停/功率/继电器控制
+- [x] 1.4.4 整理主机模式轮询的寄存器地址表
+  - 03读取: 地址100, 请求18寄存器
+  - 10写入: 地址200, 发送启停/功率/压力参数
+- [x] 1.4.5 文档化到 `specs/modbus-rtu/uart4-registers.md`
 
 ## Phase 2: 主从角色分析
 
