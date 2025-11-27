@@ -362,11 +362,7 @@ int main(void)
 						ModBus_Uart3_LocalRX_Communication();
 #endif
 					//*******处理串口4接收的数据*****************************88
-#if USE_UNIFIED_MODBUS
-						modbusUart4Scheduler();  // 统一协议层调度
-#else
 						ModBus_Uart4_Local_Communication();  //
-#endif
 					
 					//*************锅炉主控程序+++++++设备补水功能******************//	
 						//XiangBian_Steam_AddFunction();

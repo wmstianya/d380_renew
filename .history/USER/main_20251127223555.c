@@ -317,9 +317,6 @@ int main(void)
 								//*******还需要有联控的功能数据********************************8
 								
 								//*******处理串口4接收的数据*****************************88
-#if USE_UNIFIED_MODBUS
-										modbusUart4Scheduler();  // 统一协议层调度
-#else
 										if(sys_flag.LCD10_Connect)
 											{
 												//当有主屏连接时，再沟通从机的通信
@@ -327,7 +324,6 @@ int main(void)
 											}
 										
 										Union_ModBus_Uart4_Local_Communication();  //
-#endif
 								//***********前后吹扫，点火功率边界值检查***********//
 										Union_Check_Config_Data_Function();
 								//***********各机组联动控制程序***********//
@@ -362,11 +358,7 @@ int main(void)
 						ModBus_Uart3_LocalRX_Communication();
 #endif
 					//*******处理串口4接收的数据*****************************88
-#if USE_UNIFIED_MODBUS
-						modbusUart4Scheduler();  // 统一协议层调度
-#else
 						ModBus_Uart4_Local_Communication();  //
-#endif
 					
 					//*************锅炉主控程序+++++++设备补水功能******************//	
 						//XiangBian_Steam_AddFunction();

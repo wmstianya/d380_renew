@@ -43,8 +43,6 @@ extern ModbusError modbusUsart1Init(void);
 extern void modbusUsart1Scheduler(void);
 extern ModbusError modbusUsart2Init(void);
 extern void modbusUsart2Scheduler(void);
-extern ModbusError modbusUart4Init(void);
-extern void modbusUart4Scheduler(void);
 #endif
 
 extern volatile uint32_t sysTickCount; /* 引用系统时钟计数器 */
@@ -126,7 +124,6 @@ int main(void)
 	modbusUsart3Init();  // USART3 主机模式 (供水阀)
 	modbusUsart1Init();  // USART1 从机模式 (RTU服务器)
 	modbusUsart2Init();  // USART2 从机模式 (10.1寸屏幕)
-	modbusUart4Init();   // UART4 双角色 (联控通信)
 #endif
 
 	
@@ -317,9 +314,6 @@ int main(void)
 								//*******还需要有联控的功能数据********************************8
 								
 								//*******处理串口4接收的数据*****************************88
-#if USE_UNIFIED_MODBUS
-										modbusUart4Scheduler();  // 统一协议层调度
-#else
 										if(sys_flag.LCD10_Connect)
 											{
 												//当有主屏连接时，再沟通从机的通信
@@ -327,7 +321,6 @@ int main(void)
 											}
 										
 										Union_ModBus_Uart4_Local_Communication();  //
-#endif
 								//***********前后吹扫，点火功率边界值检查***********//
 										Union_Check_Config_Data_Function();
 								//***********各机组联动控制程序***********//
@@ -362,11 +355,7 @@ int main(void)
 						ModBus_Uart3_LocalRX_Communication();
 #endif
 					//*******处理串口4接收的数据*****************************88
-#if USE_UNIFIED_MODBUS
-						modbusUart4Scheduler();  // 统一协议层调度
-#else
 						ModBus_Uart4_Local_Communication();  //
-#endif
 					
 					//*************锅炉主控程序+++++++设备补水功能******************//	
 						//XiangBian_Steam_AddFunction();
