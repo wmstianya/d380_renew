@@ -494,8 +494,8 @@ ModbusError modbusUart4Init(void)
         uart4MasterCfg.pollAddrs[i] = i + 1;
     }
     uart4MasterCfg.pollCount = 10;
-    uart4MasterCfg.pollIntervalMs = 100;
-    uart4MasterCfg.respTimeoutMs = 100;
+    uart4MasterCfg.pollIntervalMs = 0;     /* 动态间隔: 收到响应立即切换 */
+    uart4MasterCfg.respTimeoutMs = 50;     /* 缩短超时: 50ms */
     uart4MasterCfg.maxRetry = 20;
     uart4MasterCfg.readRegAddr = 100;
     uart4MasterCfg.readRegCount = 18;
