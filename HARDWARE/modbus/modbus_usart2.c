@@ -21,8 +21,8 @@
 extern UartHandle uartDisplayHandle;  /* USART2 DMA驱动句柄 */
 
 /* 外部函数声明 */
-extern void ZongKong_YanFa_Open(void);
-extern void ZongKong_YanFa_Close(void);
+extern uint8 ZongKong_YanFa_Open(void);
+extern uint8 ZongKong_YanFa_Close(void);
 extern void Write_Admin_Flash(void);
 
 /* 浮点数字节转换联合体 */
@@ -168,7 +168,6 @@ static ModbusError usart2WriteControl(uint16_t addr, uint16_t count,
     uint16_t value;
     uint16_t bufInt;
     uint8_t index;
-    uint8_t jiZuIdx;
     FloatIntUnion floatInt;
     
     if (dataLen < 2) {
