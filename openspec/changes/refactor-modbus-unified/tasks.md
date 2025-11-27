@@ -18,11 +18,13 @@
   - 分机模式: 启停、功率、温度保护等
 - [x] 1.2.4 文档化到 `specs/modbus-rtu/usart2-registers.md`
 
-### 1.3 USART3 寄存器梳理 (从机设备通信)
-- [ ] 1.3.1 分析 `usart3.c` 中ModBus处理逻辑
-- [ ] 1.3.2 确认主机角色：轮询哪些从机
-- [ ] 1.3.3 整理轮询的寄存器地址表
-- [ ] 1.3.4 文档化到 `specs/modbus-rtu/usart3-registers.md`
+### 1.3 USART3 寄存器梳理 (从机设备通信) ✅
+- [x] 1.3.1 分析 `usart3.c` 中ModBus处理逻辑
+- [x] 1.3.2 确认主机角色：轮询变频供水阀 (地址8)
+- [x] 1.3.3 整理轮询的寄存器地址表
+  - 03读取: 地址0x0000, 故障状态
+  - 06写入: 地址0x0001, 开度值(0-1000)
+- [x] 1.3.4 文档化到 `specs/modbus-rtu/usart3-registers.md`
 
 ### 1.4 UART4 寄存器梳理 (联控通信) ✅
 - [x] 1.4.1 分析 `usart4.c` 中 `ModBus_Uart4_Local_Communication()` - 从机模式
