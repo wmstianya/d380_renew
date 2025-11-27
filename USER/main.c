@@ -32,6 +32,15 @@
 
 /* 此版本使用DMA+双缓冲UART驱动 (dma-only分支) */
 
+/* 统一ModBus协议层 (可选启用) */
+#define USE_UNIFIED_MODBUS   0   /* 1=使用新协议层, 0=使用旧代码 */
+
+#if USE_UNIFIED_MODBUS
+#include "modbus.h"
+extern ModbusError modbusUsart3Init(void);
+extern void modbusUsart3Scheduler(void);
+#endif
+
 extern volatile uint32_t sysTickCount; /* 引用系统时钟计数器 */
 
 /* 回环测试开关: 1=启用测试模式, 0=正常运行模式 */
@@ -105,6 +114,11 @@ int main(void)
 
 //***************串口4 DMA驱动 for 联控或本地通信****//
 	uartUnionInit(9600);  //DMA + IDLE中断模式	 
+
+#if USE_UNIFIED_MODBUS
+//***************统一ModBus协议层初始化****//
+	modbusUsart3Init();  // USART3 主机模式 (供水阀)
+#endif
 
 	
 //***配置1ms定时中断,包括全串口接收周期时间配置***//
@@ -277,8 +291,12 @@ int main(void)
 								case 2:
 								case 3:
 								//***********串口3 多机联控和本地变频补水通信，485通信解析***********//	
+#if USE_UNIFIED_MODBUS
+										modbusUsart3Scheduler();  // 统一协议层调度
+#else
 										Modbus3_UnionTx_Communication();
 										ModBus_Uart3_LocalRX_Communication();
+#endif
 								//*******还需要有联控的功能数据********************************8
 								
 								//*******处理串口4接收的数据*****************************88
@@ -316,8 +334,12 @@ int main(void)
 					//***********串口2 A2B2    LCD下发命令解析****************//
 						ModBus2LCD4013_Lcd7013_Communication();
 					//*******处理串口3      变频进水阀************************
+#if USE_UNIFIED_MODBUS
+						modbusUsart3Scheduler();  // 统一协议层调度
+#else
 						Modbus3_UnionTx_Communication();
 						ModBus_Uart3_LocalRX_Communication();
+#endif
 					//*******处理串口4接收的数据*****************************88
 						ModBus_Uart4_Local_Communication();  //
 					

@@ -28,6 +28,9 @@
 
 /* 此版本使用DMA+双缓冲UART驱动 (dma-only分支) */
 
+/* ModBus协议层时间戳支持 */
+extern void modbusTickInc(void);
+
 
 //extern		uint8 re4_time		 ;	
 
@@ -546,6 +549,9 @@ void TIM4_IRQHandler(void)   //TIM4_____5ms�ж�
 	if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET)  //���TIM4�����жϷ������
 		{
 			TIM_ClearITPendingBit(TIM4, TIM_IT_Update );  //���TIMx�����жϱ�־
+			
+			/* ModBus协议层毫秒计数 */
+			modbusTickInc();
 
 			if(Water_State.Cstate_Flag ||Water_State.Zstate_Flag) //˫��������ˮ��������
 				Water_State.ZC_Open_Time ++;
