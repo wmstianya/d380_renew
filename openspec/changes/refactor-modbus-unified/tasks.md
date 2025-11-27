@@ -77,26 +77,39 @@
 
 ---
 
-## Phase 3: 统一协议层设计
+## Phase 3: 统一协议层设计 ✅ 设计完成
 
-### 3.1 ModBus RTU核心模块
-- [ ] 3.1.1 设计 `ModbusHandle` 结构体
-- [ ] 3.1.2 设计统一API接口
-- [ ] 3.1.3 实现CRC16校验（复用现有）
-- [ ] 3.1.4 实现帧解析函数
-- [ ] 3.1.5 实现响应构建函数
+### 3.1 ModBus RTU核心模块 ✅
+- [x] 3.1.1 设计 `ModbusHandle` 结构体
+  - 角色: MODBUS_SLAVE / MODBUS_MASTER / MODBUS_DUAL
+  - 状态机: IDLE → SLAVE/MASTER状态切换
+- [x] 3.1.2 设计统一API接口
+  - modbusInit() / modbusConfigSlave() / modbusConfigMaster()
+  - modbusScheduler() 统一调度
+- [x] 3.1.3 CRC16校验 (复用现有 ModBusCRC16)
+- [x] 3.1.4 帧解析设计 (地址过滤→CRC校验→功能码分发)
+- [x] 3.1.5 响应构建设计 (寄存器映射表回调)
 
-### 3.2 从机模块
-- [ ] 3.2.1 设计从机回调接口
-- [ ] 3.2.2 实现功能码03处理框架
-- [ ] 3.2.3 实现功能码10处理框架
-- [ ] 3.2.4 实现通用响应发送
+### 3.2 从机模块 ✅
+- [x] 3.2.1 设计从机回调接口 (ModbusSlaveCallback)
+  - onRequestPre(): 请求预处理
+  - onWriteComplete(): 写入完成通知
+- [x] 3.2.2 功能码03处理框架设计
+- [x] 3.2.3 功能码10处理框架设计
+- [x] 3.2.4 通用响应发送设计
 
-### 3.3 主机模块
-- [ ] 3.3.1 设计主机轮询接口
-- [ ] 3.3.2 实现读取请求发送
-- [ ] 3.3.3 实现写入请求发送
-- [ ] 3.3.4 实现超时和重试机制
+### 3.3 主机模块 ✅
+- [x] 3.3.1 设计主机轮询接口 (ModbusMasterCallback)
+  - onResponse(): 响应接收
+  - onTimeout(): 超时处理
+  - onOffline(): 离线通知
+  - getWriteData(): 按需写入数据获取
+- [x] 3.3.2 读取请求发送设计 (modbusMasterRead)
+- [x] 3.3.3 写入请求发送设计 (modbusMasterWrite + 按需写入)
+- [x] 3.3.4 超时和重试机制设计 (动态间隔 + 离线检测)
+
+### 3.4 文档
+- [x] 文档化到 `specs/modbus-rtu/unified-layer-design.md`
 
 ## Phase 4: 业务层重构
 
