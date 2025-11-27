@@ -1,12 +1,18 @@
 # Tasks: 统一ModBus RTU协议层重构
 
-## Phase 1: 寄存器地址梳理 (前置工作)
+## Phase 1: 寄存器地址梳理 (前置工作) ✅ 完成
 
-### 1.1 USART1 寄存器梳理 (RTU服务器)
-- [ ] 1.1.1 分析 `usart.c` 中 `ModBus_Communication()` 的寄存器处理
-- [ ] 1.1.2 整理功能码03读取的寄存器地址表
-- [ ] 1.1.3 整理功能码10写入的寄存器地址表
-- [ ] 1.1.4 文档化到 `specs/modbus-rtu/usart1-registers.md`
+### 1.1 USART1 寄存器梳理 (RTU服务器) ✅
+- [x] 1.1.1 分析 `usart.c` 中 `ModBus_Communication()` 的寄存器处理
+- [x] 1.1.2 整理功能码03读取的寄存器地址表
+  - 地址0: 联控主数据 (11寄存器/22字节)
+  - 地址0x0063-0x00C7: 机组1-6数据 (仅1-2启用)
+  - 地址1000: 设备地址查询 (特殊)
+- [x] 1.1.3 整理功能码06写入的寄存器地址表
+  - 0x0000: 联控启停
+  - 0x0006: 故障复位
+  - 0x0007-0x0009: 压力参数
+- [x] 1.1.4 文档化到 `specs/modbus-rtu/usart1-registers.md`
 
 ### 1.2 USART2 寄存器梳理 (屏幕通信) ✅
 - [x] 1.2.1 分析 `usart2.c` 中 `Union_ModBus2_Communication()` 的寄存器处理
