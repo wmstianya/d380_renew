@@ -12,6 +12,7 @@
 
 #include "modbus.h"
 #include "system_control.h"
+#include <string.h>
 
 /*============================================================================*/
 /*                              外部声明                                       */
@@ -26,23 +27,8 @@ extern UartHandle uartSlaveHandle;  /* USART3 DMA驱动句柄 */
 /* ModBus句柄 */
 static ModbusHandle modbusUsart3;
 
-/* 主机配置 */
-static ModbusMasterCfg usart3MasterCfg = {
-    .pollAddrs = {8},           /* 变频供水阀地址 */
-    .pollCount = 1,
-    .currentIdx = 0,
-    .currentSendIdx = 0,
-    
-    .readRegAddr = 0x0000,      /* 读取故障状态地址 */
-    .readRegCount = 1,
-    .writeRegAddr = 0x0001,     /* 写入开度值地址 */
-    
-    .respTimeoutMs = 50,        /* 响应超时50ms */
-    .pollIntervalMs = 200,      /* 轮询间隔200ms */
-    
-    .maxRetry = 3,
-    .offlineThreshold = 10
-};
+/* 主机配置 (在init函数中初始化) */
+static ModbusMasterCfg usart3MasterCfg;
 
 /* 上次写入的开度值 (按需写入优化) */
 static uint16_t lastWaterPercent = 0xFFFF;
@@ -140,13 +126,8 @@ static uint16_t usart3GetWriteData(uint8_t slaveAddr, uint16_t* regAddr,
     return 2;  /* 1个寄存器 = 2字节 */
 }
 
-/* 主机回调集合 */
-static ModbusMasterCallback usart3MasterCb = {
-    .onResponse = usart3OnResponse,
-    .onTimeout = usart3OnTimeout,
-    .onOffline = usart3OnOffline,
-    .getWriteData = usart3GetWriteData
-};
+/* 主机回调集合 (在init函数中初始化) */
+static ModbusMasterCallback usart3MasterCb;
 
 /*============================================================================*/
 /*                              公共接口                                       */
@@ -159,6 +140,27 @@ static ModbusMasterCallback usart3MasterCb = {
 ModbusError modbusUsart3Init(void)
 {
     ModbusError err;
+    
+    /* 初始化主机配置 */
+    memset(&usart3MasterCfg, 0, sizeof(usart3MasterCfg));
+    usart3MasterCfg.pollAddrs[0] = 8;       /* 变频供水阀地址 */
+    usart3MasterCfg.pollCount = 1;
+    usart3MasterCfg.currentIdx = 0;
+    usart3MasterCfg.currentSendIdx = 0;
+    usart3MasterCfg.readRegAddr = 0x0000;   /* 读取故障状态地址 */
+    usart3MasterCfg.readRegCount = 1;
+    usart3MasterCfg.writeRegAddr = 0x0001;  /* 写入开度值地址 */
+    usart3MasterCfg.respTimeoutMs = 50;     /* 响应超时50ms */
+    usart3MasterCfg.pollIntervalMs = 200;   /* 轮询间隔200ms */
+    usart3MasterCfg.maxRetry = 3;
+    usart3MasterCfg.offlineThreshold = 10;
+    
+    /* 初始化回调 */
+    memset(&usart3MasterCb, 0, sizeof(usart3MasterCb));
+    usart3MasterCb.onResponse = usart3OnResponse;
+    usart3MasterCb.onTimeout = usart3OnTimeout;
+    usart3MasterCb.onOffline = usart3OnOffline;
+    usart3MasterCb.getWriteData = usart3GetWriteData;
     
     /* 初始化句柄 */
     err = modbusInit(&modbusUsart3, &uartSlaveHandle, MODBUS_ROLE_MASTER);

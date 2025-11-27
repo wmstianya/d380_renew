@@ -365,7 +365,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\HARDWARE\LED;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\USER;..\STM32F10x_FWLib\inc;..\CORE;..\HARDWARE\DHT11;..\HARDWARE\timers;..\HARDWARE\24CXX;..\HARDWARE\FLASH;..\HARDWARE\RTC;..\HARDWARE\tm1638;..\HARDWARE\ADC;..\HARDWARE\USART2;..\HARDWARE\USART3;..\HARDWARE\relays;.\rcc;.\systick;..\HARDWARE\USART4;..\HARDWARE\USR_C210;..\HARDWARE\Parallel_Serial;..\SYSTEM\system_control;..\SYSTEM\rtc;..\SYSTEM\in_flash;..\HARDWARE\PWM;..\SYSTEM\iwdg;..\SYSTEM\activate_key;..\HARDWARE\USART5;..\SYSTEM\out_flash;..\HARDWARE\ADS1220;..\HARDWARE\uart_driver</IncludePath>
+              <IncludePath>..\HARDWARE\LED;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\USER;..\STM32F10x_FWLib\inc;..\CORE;..\HARDWARE\DHT11;..\HARDWARE\timers;..\HARDWARE\24CXX;..\HARDWARE\FLASH;..\HARDWARE\RTC;..\HARDWARE\tm1638;..\HARDWARE\ADC;..\HARDWARE\USART2;..\HARDWARE\USART3;..\HARDWARE\relays;.\rcc;.\systick;..\HARDWARE\USART4;..\HARDWARE\USR_C210;..\HARDWARE\Parallel_Serial;..\SYSTEM\system_control;..\SYSTEM\rtc;..\SYSTEM\in_flash;..\HARDWARE\PWM;..\SYSTEM\iwdg;..\SYSTEM\activate_key;..\HARDWARE\USART5;..\SYSTEM\out_flash;..\HARDWARE\ADS1220;..\HARDWARE\uart_driver;..\HARDWARE\modbus</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -792,6 +792,36 @@
               <FileName>uart_test.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\HARDWARE\uart_driver\uart_test.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>MODBUS</GroupName>
+          <Files>
+            <File>
+              <FileName>modbus_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\modbus\modbus_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>modbus_slave.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\modbus\modbus_slave.c</FilePath>
+            </File>
+            <File>
+              <FileName>modbus_master.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\modbus\modbus_master.c</FilePath>
+            </File>
+            <File>
+              <FileName>modbus_port.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\modbus\modbus_port.c</FilePath>
+            </File>
+            <File>
+              <FileName>modbus_usart3.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\modbus\modbus_usart3.c</FilePath>
             </File>
           </Files>
         </Group>

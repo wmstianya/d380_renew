@@ -33,7 +33,7 @@
 /* 此版本使用DMA+双缓冲UART驱动 (dma-only分支) */
 
 /* 统一ModBus协议层 (可选启用) */
-#define USE_UNIFIED_MODBUS   1   /* 1=使用新协议层, 0=使用旧代码 */
+#define USE_UNIFIED_MODBUS   0   /* 1=使用新协议层, 0=使用旧代码 */
 
 #if USE_UNIFIED_MODBUS
 #include "modbus.h"
