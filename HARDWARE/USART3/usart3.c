@@ -3,7 +3,7 @@
 #include "uart_driver.h"
 
 /* 启用新UART驱动 */
-#define USE_NEW_UART_DRIVER
+//#define USE_NEW_UART_DRIVER
 
   
 
@@ -120,7 +120,11 @@ uint8 FuNiSen_Read_WaterDevice_Function(void)
 					U3_Inf.TX_Data[6]  = check_sum >> 8 ;
 					U3_Inf.TX_Data[7]  = check_sum & 0x00FF;
 					
+#ifdef USE_NEW_UART_DRIVER
+					uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
+#else
 					Usart_SendStr_length(USART3,U3_Inf.TX_Data,8);
+#endif
 				   
 					//Jump_Index = 1;
 					break;
@@ -139,7 +143,11 @@ uint8 FuNiSen_Read_WaterDevice_Function(void)
 					check_sum  = ModBusCRC16(U3_Inf.TX_Data,8);
 					U3_Inf.TX_Data[6]  = check_sum >> 8 ;
 					U3_Inf.TX_Data[7]  = check_sum & 0x00FF;			
+#ifdef USE_NEW_UART_DRIVER
+					uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
+#else
 					Usart_SendStr_length(USART3,U3_Inf.TX_Data,8);
+#endif
 					break;
 			default:
 					Jump_Index = 0;
@@ -378,7 +386,11 @@ uint8 ModBus3_RTU_Read03(uint8 Target_Address,uint16 Data_Address,uint8 Data_Len
 		U3_Inf.TX_Data[6]= Check_Sum >> 8;
 		U3_Inf.TX_Data[7]= Check_Sum & 0x00FF;
 		
+#ifdef USE_NEW_UART_DRIVER
+		uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
+#else
 		Usart_SendStr_length(USART3,U3_Inf.TX_Data,8);
+#endif
 
 
 	return 0;
@@ -400,7 +412,11 @@ uint8 ModBus3_RTU_Write06(uint8 Target_Address,uint16 Data_Address,uint16 Data16
 		U3_Inf.TX_Data[6]= Check_Sum >> 8;
 		U3_Inf.TX_Data[7]= Check_Sum & 0x00FF;
 
+#ifdef USE_NEW_UART_DRIVER
+		uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
+#else
 		Usart_SendStr_length(USART3,U3_Inf.TX_Data,8);
+#endif
 
 		
 

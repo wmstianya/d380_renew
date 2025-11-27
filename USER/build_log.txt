@@ -1,0 +1,9 @@
+Build target 'Target 1'
+compiling usart2.c...
+..\HARDWARE\USART2\usart2.c(349): warning:  #111-D: statement is unreachable
+                                                                                                break;
+..\HARDWARE\USART2\usart2.c: 1 warning, 0 errors
+linking...
+Program Size: Code=57034 RO-data=1078 RW-data=636 ZI-data=11508  
+FromELF: creating hex file...
+"..\OBJ\UART.axf" - 0 Error(s), 1 Warning(s).

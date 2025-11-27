@@ -74,7 +74,7 @@ typedef enum {
  * @param  handle: UART句柄指针
  * @return 无
  */
-void uartTestInit(UartHandle_t* handle);
+void uartTestInit(UartHandle* handle);
 
 /**
  * @brief  启动回环压力测试
@@ -83,7 +83,7 @@ void uartTestInit(UartHandle_t* handle);
  * @param  packetSize: 数据包大小 (1-64)
  * @return 0:成功启动, 其他:错误
  */
-uint8_t uartTestStartLoopback(UartHandle_t* handle, uint32_t testCount, uint8_t packetSize);
+uint8_t uartTestStartLoopback(UartHandle* handle, uint32_t testCount, uint8_t packetSize);
 
 /**
  * @brief  停止测试
@@ -117,7 +117,7 @@ void uartTestReset(void);
  * @param  timeoutMs: 超时时间(ms)
  * @return 错误类型
  */
-UartTestError_e uartTestSingleLoopback(UartHandle_t* handle, 
+UartTestError_e uartTestSingleLoopback(UartHandle* handle, 
                                         uint8_t* data, 
                                         uint8_t length,
                                         uint32_t timeoutMs);

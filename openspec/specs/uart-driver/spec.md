@@ -1,8 +1,9 @@
 # UART DMA驱动模块规格
 
-## 概述
+## Purpose
 
 统一的UART通信驱动，使用DMA+IDLE线检测实现高效的ModBus RTU通信。
+Unified UART communication driver using DMA+IDLE line detection for efficient ModBus RTU communication.
 
 ## 模块信息
 
@@ -56,9 +57,7 @@ typedef enum {
     UART_ERR_PARAM
 } UartStatus_e;
 ```
-
-## 功能要求
-
+## Requirements
 ### Requirement: DMA接收
 
 系统SHALL使用DMA进行UART数据接收，配合IDLE线检测自动识别帧结束。
@@ -73,15 +72,25 @@ typedef enum {
 - **AND** 设置rxReady标志
 
 ### Requirement: 双缓冲机制
+The system MUST use double buffering to prevent data loss during processing. (系统必须使用双缓冲，保证数据处理期间不丢失新数据。)
 
-系统SHALL实现双缓冲机制，避免数据覆盖。
+#### Scenario: 缓冲区切换
+- **WHEN** IDLE中断表示一帧完成
+- **THEN** 当前缓冲区保留给应用层处理
+- **AND** DMA切换到另一个缓冲区继续接收
+- **AND** activeRxBuffer = 1 - activeRxBuffer
 
-#### Scenario: 连续接收
+#### Scenario: 并行处理
+- **WHEN** 应用层处理 rxBuffer[0] 的数据
+- **THEN** DMA可同时向 rxBuffer[1] 接收新数据
+- **AND** 互不干扰
+- **AND** 避免数据覆盖
 
-- **WHEN** 当前缓冲区数据正在处理
-- **AND** 新数据到达
-- **THEN** DMA写入备用缓冲区
-- **AND** 不影响正在处理的数据
+#### Scenario: 缓冲区大小
+- **WHEN** 定义缓冲区
+- **THEN** 每个缓冲区 256 字节
+- **AND** 满足ModBus最大帧长度 (256字节)
+- **AND** 双缓冲共 512 字节
 
 ### Requirement: DMA发送
 
@@ -103,6 +112,120 @@ typedef enum {
 - **WHEN** DMA发送未在指定时间完成
 - **THEN** 返回UART_ERR_TIMEOUT
 - **AND** 不阻塞系统
+
+### Requirement: 统一驱动接口
+The system MUST provide a unified UART driver interface supporting multiple UART ports with the same API. (系统必须提供统一的UART驱动接口，支持多个UART端口使用相同的API。)
+
+#### Scenario: 驱动初始化
+- **WHEN** 调用 `uartDriverInit(&handle)`
+- **THEN** 配置GPIO引脚
+- **AND** 配置USART外设
+- **AND** 配置DMA通道
+- **AND** 使能IDLE中断
+- **AND** 返回0表示成功
+
+#### Scenario: 配置灵活性
+- **WHEN** 创建不同UART的配置
+- **THEN** 通过 `UartConfig` 结构体指定参数
+- **AND** 支持不同波特率、引脚、DMA通道
+- **AND** 同一驱动代码适配多个UART
+
+### Requirement: DMA接收模式
+The system MUST use DMA for UART data reception to reduce CPU interrupt overhead. (系统必须使用DMA进行串口数据接收，减少CPU中断负担。)
+
+#### Scenario: 自动接收
+- **WHEN** 串口收到数据
+- **THEN** DMA自动将数据搬运到接收缓冲区
+- **AND** CPU不参与每字节中断
+- **AND** 后台静默接收
+
+#### Scenario: IDLE中断帧结束检测
+- **WHEN** 串口线路空闲时间 >= 1字节时间
+- **THEN** 触发IDLE中断
+- **AND** 表示一帧数据接收完成
+- **AND** 精确检测ModBus帧边界
+
+#### Scenario: 接收长度计算
+- **WHEN** IDLE中断触发
+- **THEN** 读取DMA剩余计数器
+- **AND** 计算 rxLength = BUFFER_SIZE - DMA_CNDTR
+- **AND** 保存到 `handle.buffer.rxLength`
+
+### Requirement: DMA发送模式
+The system MUST use DMA for UART data transmission to enable non-blocking sends. (系统必须使用DMA进行串口数据发送，实现非阻塞发送。)
+
+#### Scenario: 非阻塞发送
+- **WHEN** 调用 `uartSendDma(&handle, data, len)`
+- **THEN** 数据复制到发送缓冲区
+- **AND** 启动DMA发送
+- **AND** 立即返回，不等待发送完成
+
+#### Scenario: 发送忙检测
+- **WHEN** 调用发送函数
+- **AND** 上次发送未完成 (txBusy == 1)
+- **THEN** 返回错误码1
+- **AND** 不覆盖发送缓冲区
+
+#### Scenario: 发送完成
+- **WHEN** DMA发送完成
+- **THEN** 清除 txBusy 标志
+- **AND** 允许下次发送
+
+### Requirement: 错误处理
+The system MUST properly handle various UART communication errors. (系统必须正确处理串口通信中的各种错误。)
+
+#### Scenario: 溢出错误 (ORE)
+- **WHEN** 接收数据溢出
+- **THEN** 清除ORE标志
+- **AND** 读取DR寄存器丢弃数据
+- **AND** 不影响后续接收
+
+#### Scenario: 帧错误 (FE)
+- **WHEN** 检测到帧错误
+- **THEN** 清除FE标志
+- **AND** 丢弃错误帧
+- **AND** 继续接收
+
+#### Scenario: 奇偶校验错误 (PE)
+- **WHEN** 检测到校验错误
+- **THEN** 清除PE标志
+- **AND** 丢弃错误数据
+
+### Requirement: USART2 配置 (显示屏通信)
+USART2 MUST be configured for communication with the display screen. (USART2必须配置为与串口屏通信。)
+
+#### Scenario: USART2 硬件配置
+- **WHEN** 初始化USART2
+- **THEN** 配置参数：
+  - 引脚: PA2(TX), PA3(RX)
+  - 波特率: 115200
+  - DMA RX: DMA1_Channel6
+  - DMA TX: DMA1_Channel7
+  - NVIC优先级: 2
+
+#### Scenario: USART2 协议
+- **WHEN** 与显示屏通信
+- **THEN** 使用ModBus RTU协议
+- **AND** 地址: 1 (显示屏) 或 2 (LCD4013)
+- **AND** 支持功能码: 03(读), 10(写多寄存器)
+
+### Requirement: USART3 配置 (主从机通信)
+USART3 MUST be configured for master-slave communication. (USART3必须配置为主从机通信。)
+
+#### Scenario: USART3 硬件配置
+- **WHEN** 初始化USART3
+- **THEN** 配置参数：
+  - 引脚: PB10(TX), PB11(RX)
+  - 波特率: 115200
+  - DMA RX: DMA1_Channel3
+  - DMA TX: DMA1_Channel2
+  - NVIC优先级: 0 (高优先级)
+
+#### Scenario: USART3 协议
+- **WHEN** 与从机或变频器通信
+- **THEN** 使用ModBus RTU协议
+- **AND** 支持读写操作
+- **AND** 轮询各从机地址
 
 ## API参考
 
@@ -224,9 +347,49 @@ typedef struct {
 } UartTestResult_t;
 ```
 
+## 收发同步机制
+
+### 接收同步流程
+
+```
+[空闲] → [DMA接收中] → [IDLE触发] → [缓冲切换] → [数据就绪] → [应用处理] → [清除标志] → [空闲]
+         ↑                                                                          ↓
+         └──────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **DMA后台接收**: 数据自动存入rxBuffer[activeRxIdx]
+2. **IDLE中断触发**: 帧间隔检测到空闲
+3. **双缓冲切换**: 保存当前索引，切换到另一个缓冲
+4. **rxComplete置位**: 通知应用层有数据
+5. **应用层处理**: 调用uartGetRxData()获取数据
+6. **清除标志**: 调用uartClearRxFlag()允许新数据
+
+### 发送同步流程
+
+```
+[空闲] → [检查txBusy] → [复制数据] → [启动DMA/阻塞发送] → [等待完成] → [清除txBusy] → [空闲]
+```
+
+当前实现: uartSendDma()内部调用uartSendBlocking()进行阻塞发送（临时方案）。
+
+### 中断服务配置
+
+| 中断 | 处理函数 | 优先级 | 用途 |
+|------|----------|--------|------|
+| USART2_IRQn | USART2_IRQHandler | 2:0 | IDLE帧检测 |
+| USART3_IRQn | USART3_IRQHandler | 0:0 | IDLE帧检测 |
+| DMA1_Channel7_IRQn | DMA1_Channel7_IRQHandler | 3:0 | USART2 TX完成 |
+| DMA1_Channel2_IRQn | DMA1_Channel2_IRQHandler | 1:0 | USART3 TX完成 |
+
 ## 版本历史
 
-### v1.0 (2024)
+### v1.1 (2025-11-27)
+
+- ✅ 补充收发同步机制文档
+- ✅ 补充中断服务配置表
+- ✅ 与usart2-display-comm spec同步
+
+### v1.0 (2025-11-26)
 
 - ✅ DMA+IDLE线检测接收
 - ✅ 双缓冲机制

@@ -2,7 +2,7 @@
  * @file    uart_test.c
  * @brief   UART回环压力测试模块实现
  * @author  AI Assistant
- * @date    2024
+ * @date    2025
  * @version 1.0
  */
 
@@ -16,7 +16,7 @@
 
 /** @brief 测试状态结构 */
 static struct {
-    UartHandle_t* handle;           /**< 当前测试的UART句柄 */
+    UartHandle* handle;           /**< 当前测试的UART句柄 */
     UartTestResult_t result;        /**< 测试结果 */
     uint32_t targetCount;           /**< 目标测试次数 */
     uint8_t  packetSize;            /**< 数据包大小 */
@@ -178,13 +178,13 @@ static void updateLatencyStats(uint32_t latency)
 /*                              公共函数实现                                    */
 /*============================================================================*/
 
-void uartTestInit(UartHandle_t* handle)
+void uartTestInit(UartHandle* handle)
 {
     memset(&testCtx, 0, sizeof(testCtx));
     testCtx.handle = handle;
 }
 
-uint8_t uartTestStartLoopback(UartHandle_t* handle, uint32_t testCount, uint8_t packetSize)
+uint8_t uartTestStartLoopback(UartHandle* handle, uint32_t testCount, uint8_t packetSize)
 {
     if (testCtx.result.isRunning)
     {
@@ -323,7 +323,7 @@ void uartTestReset(void)
     testCtx.totalLatency = 0;
 }
 
-UartTestError_e uartTestSingleLoopback(UartHandle_t* handle, 
+UartTestError_e uartTestSingleLoopback(UartHandle* handle, 
                                         uint8_t* data, 
                                         uint8_t length,
                                         uint32_t timeoutMs)
