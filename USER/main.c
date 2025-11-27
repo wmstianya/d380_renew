@@ -27,9 +27,16 @@
 //2025年11月26日 UART驱动重构: DMA + 双缓冲 + IDLE中断
 #include "main.h"
 #include "uart_driver.h"
+#include "uart_test.h"
 
-/* 启用新UART驱动 (与stm32f10x_it.c中的宏保持一致) */
-#define USE_NEW_UART_DRIVER
+/* USE_NEW_UART_DRIVER 宏已在 uart_driver.h 中统一定义 */
+
+extern volatile uint32_t sysTickCount; /* 引用系统时钟计数器 */
+
+/* 回环测试开关: 1=启用测试模式, 0=正常运行模式 */
+#define UART_LOOPBACK_TEST_ENABLE   0  /* 关闭测试，正常运行 */
+#define UART_TEST_COUNT             100   /* 测试次数 */
+#define UART_TEST_PACKET_SIZE       32    /* 数据包大小(字节) */
 
 
 const uint16 Soft_Version = 108;/*2025年5月19日13:42:27*/
@@ -64,11 +71,92 @@ int main(void)
 	uartDisplayInit(9600);  //DMA + IDLE中断模式
 //***************串口3 使用新DMA驱动 for 设备内部通信准备******//
 	uartSlaveInit(9600);    //DMA + IDLE中断模式
+
+#if UART_LOOPBACK_TEST_ENABLE
+	/* 回环测试初始化 - 测试USART2 (需要PA2-PA3短接) */
+	u1_printf("\n====== UART DMA Loopback Test ======\n");
+	u1_printf("Testing USART2, Count=%d, Size=%d\n", UART_TEST_COUNT, UART_TEST_PACKET_SIZE);
+	u1_printf("Please short PA2(TX) <-> PA3(RX)\n");
+	
+	/* 先用阻塞方式测试USART2是否能发送 */
+	{
+		uint8_t testData[] = {0xAA, 0x55, 0x01, 0x02, 0x03};
+		u1_printf("Blocking send test...\n");
+		uartSendBlocking(&uartDisplayHandle, testData, 5);
+		u1_printf("Blocking send done.\n");
+		SysTick_Delay_ms(100);
+		
+		/* 检查是否收到回环数据 */
+		if (uartIsRxReady(&uartDisplayHandle))
+		{
+			u1_printf("Loopback OK! Received data.\n");
+		}
+		else
+		{
+			u1_printf("No loopback data! Check PA2-PA3 connection.\n");
+		}
+		uartClearRxFlag(&uartDisplayHandle);
+	}
+	
+	u1_printf("Starting DMA loopback test...\n");
+	uartTestInit(&uartDisplayHandle);
+	uartTestStartLoopback(&uartDisplayHandle, UART_TEST_COUNT, UART_TEST_PACKET_SIZE);
+#endif
+
 #else
 //***************串口2     A2 B2初始化为19200       for 10.1寸外置的屏*****//
 	uart2_init(9600);//优先级2:1
 //***************串口3初始化为9600       for 设备内部通信准备******//
 	uart3_init(9600); //优先级2:2	 
+
+#if UART_LOOPBACK_TEST_ENABLE
+	/* RS485 回环测试 - A/B 短接 */
+	IWDG_Config(IWDG_Prescaler_64, 900);
+	
+	u1_printf("\n====== RS485 Loopback Test ======\n");
+	u1_printf("A/B shorted, testing RS485 half-duplex...\n");
+	
+	/* 重新初始化 USART2 */
+	uart2_init(9600);
+	
+	while(1)
+	{
+		uint8_t testData[] = {0xBB, 0x66, 0x01, 0x02, 0x03};
+		uint8_t i;
+		
+		IWDG_Feed();
+		
+		/* 发送数据 */
+		Usart_SendStr_length(USART2, testData, 5);
+		
+		/* 等待发送完成 + RS485 切换到接收模式 */
+		while(USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET);
+		SysTick_Delay_ms(5);  /* 等待 RS485 方向切换 */
+		
+		u1_printf("TX done. SR=0x%04X\n", USART2->SR);
+		
+		IWDG_Feed();
+		
+		/* 检查是否收到数据 */
+		SysTick_Delay_ms(50);
+		
+		if(USART2->SR & 0x0020)  /* RXNE */
+		{
+			u1_printf("RX: 0x%02X\n", USART2->DR);
+		}
+		
+		if(U2_Inf.Recive_Ok_Flag)
+		{
+			u1_printf("Frame OK! Len=%d, Data:", U2_Inf.RX_Length);
+			for(i = 0; i < U2_Inf.RX_Length && i < 10; i++)
+				u1_printf(" %02X", U2_Inf.RX_Data[i]);
+			u1_printf("\n");
+			U2_Inf.Recive_Ok_Flag = 0;
+		}
+		
+		SysTick_Delay_ms(300);
+	}
+#endif
 #endif
 
 //***************串口4初始化为 联控或者本地通信 ****//
@@ -152,6 +240,18 @@ int main(void)
 	
 	while(1)
 	{	
+#if UART_LOOPBACK_TEST_ENABLE && defined(USE_NEW_UART_DRIVER)
+		/* 回环测试处理 */
+		IWDG_Feed();
+		if (uartTestProcess())
+		{
+			/* 测试完成，打印结果 */
+			uartTestPrintResult();
+			u1_printf("\nTest completed! System halted.\n");
+			while(1) { IWDG_Feed(); }  /* 停止，查看结果 */
+		}
+		continue;  /* 测试模式下跳过正常业务 */
+#endif
 
 		Sys_Admin.Fan_Speed_Check = 0;
 		
@@ -169,7 +269,54 @@ int main(void)
 		ModBus_Communication();
 //**********继电器需要过零控制，检测不到中断，需要强制处理******************************************//
 		Relays_NoInterrupt_ON_OFF();
-//***********机器地址和设备类型的判定***********************//
+		//***********机器地址和设备类型的判定***********************//
+#ifdef USE_NEW_UART_DRIVER
+		{
+			static uint32_t lastDmaCnt = 0;
+			uint32_t currDmaCnt = DMA_GetCurrDataCounter(uartDisplayHandle.config.dmaRxChannel);
+			
+			/* 调试: 检查USART2是否收到数据 */
+			if (uartIsRxReady(&uartDisplayHandle))
+			{
+				u1_printf("U2 RX: len=%d\n", uartDisplayHandle.buffer.rxDataLen);
+			}
+			
+			/* 调试: 打印DMA计数器 */
+			if (currDmaCnt != lastDmaCnt)
+			{
+				u1_printf("DMA Cnt: %d (Received %d)\n", currDmaCnt, UART_RX_BUFFER_SIZE - currDmaCnt);
+				lastDmaCnt = currDmaCnt;
+			}
+			else
+			{
+				/* 周期性打印以便确认DMA状态 (每1s打印一次) */
+				static uint32_t printTick = 0;
+				if (sysTickCount - printTick > 1000)
+				{
+					u1_printf("DMA Idle: %d\n", currDmaCnt);
+					printTick = sysTickCount;
+				}
+			}
+			
+			/* 调试: 检查RXNE标志 (如果DMA没工作，RXNE会置位) */
+			if (USART_GetFlagStatus(USART2, USART_FLAG_RXNE) != RESET)
+			{
+				uint16_t data = USART_ReceiveData(USART2);
+				u1_printf("RXNE set! Data: %02X (DMA failed to read)\n", data);
+			}
+		}
+#endif
+
+		/* 调试: 每5秒打印一次Address_Number */
+		{
+			static uint32_t lastPrint = 0;
+			if (sysTickCount - lastPrint > 5000)
+			{
+				u1_printf("Addr=%d\n", sys_flag.Address_Number);
+				lastPrint = sysTickCount;
+			}
+		}
+		
 		switch (sys_flag.Address_Number)
 			{
 				case 0: //主控设备

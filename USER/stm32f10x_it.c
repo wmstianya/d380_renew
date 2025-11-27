@@ -26,8 +26,7 @@
 #include "main.h"
 #include "uart_driver.h"
 
-/* 启用新UART驱动宏定义 */
-#define USE_NEW_UART_DRIVER
+/* USE_NEW_UART_DRIVER 宏已在 uart_driver.h 中统一定义 */
 
 
 //extern		uint8 re4_time		 ;	
@@ -391,13 +390,6 @@ void USART2_IRQHandler(void)              //串口2中断服务函数
 #ifdef USE_NEW_UART_DRIVER
     /* 使用新驱动: DMA + IDLE中断处理 */
     uartIdleIrqHandler(&uartDisplayHandle);
-    
-    /* 处理错误标志 */
-    if (USART_GetFlagStatus(USART2, USART_FLAG_ORE) == SET)
-    {
-        USART_ClearFlag(USART2, USART_FLAG_ORE);
-        USART_ReceiveData(USART2);
-    }
 #else
     /* 旧驱动: 逐字节中断处理 */
     uint8 Res = 0;

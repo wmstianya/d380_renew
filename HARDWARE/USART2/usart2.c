@@ -2,8 +2,7 @@
 #include "stdarg.h"
 #include "uart_driver.h"
 
-/* 启用新UART驱动 (与main.c和stm32f10x_it.c保持一致) */
-#define USE_NEW_UART_DRIVER
+/* USE_NEW_UART_DRIVER ������ uart_driver.h ��ͳһ���� */
  
 
 
@@ -16,7 +15,7 @@
 LCD10Struct LCD10D;
 UNION_GGA AUnionD;
 
-LCD10_JZ_Struct LCD10JZ[13];  //���ڻ����������ʾ
+LCD10_JZ_Struct LCD10JZ[13];  //���ڻ�����������?
 
 ALCD10Struct UnionLCD;
 
@@ -71,9 +70,9 @@ void u2_printf(char* fmt,...)
 
 ///////////////////////////////////////USART2 ��ʼ�����ò���//////////////////////////////////	    
 //���ܣ���ʼ��IO ����2
-//�������
+//�������?
 //bound:������
-//�������
+//�������?
 //��
 //////////////////////////////////////////////////////////////////////////////////////////////	  
 void uart2_init(u32 bound)
@@ -90,12 +89,12 @@ void uart2_init(u32 bound)
      //USART2_TX   PA.2
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2; //PA.2
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;	//�����������
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;	//�����������?
     GPIO_Init(GPIOA, &GPIO_InitStructure);
    
     //USART2_RX	  PA.3
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;//��������
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;  //�������� (��������)
     GPIO_Init(GPIOA, &GPIO_InitStructure);  
 
     //Usart2 NVIC ����
@@ -146,17 +145,37 @@ void Union_ModBus2_Communication(void)
 #endif
 
 #ifdef USE_NEW_UART_DRIVER
-		/* 新驱动: 检查DMA接收完成标志 */
-		if (uartIsRxReady(&uartDisplayHandle))
+		/* ������: ���DMA������ɱ�־ */
 		{
-			if (uartGetRxData(&uartDisplayHandle, &rxData, &rxLen) != UART_OK)
-				return;
+			uint8_t ready = uartIsRxReady(&uartDisplayHandle);
+			/* ����: ֻ��״̬�仯ʱ��ӡ */
+			static uint8_t lastReady = 0;
+			if (ready != lastReady)
+			{
+				u1_printf("U2Comm: ready=%d\n", ready);
+				lastReady = ready;
+			}
 			
-			/* 复制数据到U2_Inf以兼容后续代码 */
-			for (i = 0; i < rxLen && i < 300; i++)
-				U2_Inf.RX_Data[i] = rxData[i];
-			U2_Inf.RX_Length = rxLen;
-			U2_Inf.Recive_Ok_Flag = 1;
+			if (ready)
+			{
+				if (uartGetRxData(&uartDisplayHandle, &rxData, &rxLen) != UART_OK)
+				{
+					u1_printf("U2Comm: GetRxData FAIL\n");
+					return;
+				}
+				
+				/* �������ݵ�U2_Inf�Լ��ݺ������� */
+				for (i = 0; i < rxLen && i < 300; i++)
+					U2_Inf.RX_Data[i] = rxData[i];
+				U2_Inf.RX_Length = rxLen;
+				U2_Inf.Recive_Ok_Flag = 1;
+				
+				/* ����: ��ӡ���յ���ԭʼ���� */
+				u1_printf("RX[%d]:", rxLen);
+				for (i = 0; i < rxLen && i < 10; i++)
+					u1_printf(" %02X", U2_Inf.RX_Data[i]);
+				u1_printf("\n");
+			}
 		}
 #endif
 		
@@ -164,12 +183,18 @@ void Union_ModBus2_Communication(void)
 			{
 				U2_Inf.Recive_Ok_Flag = 0;
 #ifndef USE_NEW_UART_DRIVER
-				/* 旧驱动: 关闭中断 */
+				/* 旧驱�?: 关闭�?�? */
 				USART_ITConfig(USART2, USART_IT_RXNE, DISABLE);
 #endif
 				 
 				checksum  = U2_Inf.RX_Data[U2_Inf.RX_Length - 2] * 256 + U2_Inf.RX_Data[U2_Inf.RX_Length - 1];
 				
+				/* ����: ��ӡCRCУ����Ϣ */
+				{
+					uint16 calcCrc = ModBusCRC16(U2_Inf.RX_Data, U2_Inf.RX_Length);
+					u1_printf("RX CRC: recv=%04X calc=%04X %s\n", checksum, calcCrc, 
+						(checksum == calcCrc) ? "OK" : "FAIL");
+				}
 			 	
 				if(checksum == ModBusCRC16(U2_Inf.RX_Data,U2_Inf.RX_Length))
 					{	
@@ -203,7 +228,11 @@ void Union_ModBus2_Communication(void)
 												U2_Inf.TX_Data[Bytes + 3] = checksum >> 8;
 												U2_Inf.TX_Data[Bytes + 4] = checksum & 0x00FF;
 												
+#ifdef USE_NEW_UART_DRIVER
+									 			uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
+#else
 									 			Usart_SendStr_length(USART2,U2_Inf.TX_Data,Bytes +5);
+#endif
 
 											
 									 			break;
@@ -216,13 +245,17 @@ void Union_ModBus2_Communication(void)
 
 												
 									 			for(index = 3; index < (Bytes + 3); index ++)
-													U2_Inf.TX_Data[index] = JiZu[1].Datas[index -3]; //�������ַ����
+													U2_Inf.TX_Data[index] = JiZu[1].Datas[index -3]; //�������ַ����?
 													
-									 			checksum  = ModBusCRC16(U2_Inf.TX_Data,Bytes + 5);
+								checksum  = ModBusCRC16(U2_Inf.TX_Data,Bytes + 5);
 												U2_Inf.TX_Data[Bytes + 3] = checksum >> 8;
 												U2_Inf.TX_Data[Bytes + 4] = checksum & 0x00FF;
 												
+#ifdef USE_NEW_UART_DRIVER
+									 			uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
+#else
 									 			Usart_SendStr_length(USART2,U2_Inf.TX_Data,Bytes +5);
+#endif
 
 												break;
 									case 0x0077://ȡ����2������ֵ
@@ -263,11 +296,11 @@ void Union_ModBus2_Communication(void)
 
 						if(Cmd_Data == 0x10 && Modbus_Address == 1)
 							{
-								 //01  10  00 A4	00 02  04  00 0F 3D DD 18 EE д32λ����ָ���ʽ
+								 //01  10  00 A4	00 02  04  00 0F 3D DD 18 EE д32λ����ָ����?
 					  			 //��Ӧ�� 01 10 00 A4	  00 02 crc
 								Data_Address = U2_Inf.RX_Data[2] * 256 + U2_Inf.RX_Data[3];
 								Data_Length = U2_Inf.RX_Data[4] * 256 + U2_Inf.RX_Data[5];
-								Buffer_Data16 = U2_Inf.RX_Data[7]  + U2_Inf.RX_Data[8] * 256;  //�ߵ��ֽڵ�˳��ߵ�  //�ߵ��ֽڵ�˳��ߵ�
+								Buffer_Data16 = U2_Inf.RX_Data[7]  + U2_Inf.RX_Data[8] * 256;  //�ߵ��ֽڵ�˳��ߵ�?  //�ߵ��ֽڵ�˳��ߵ�?
 						
 								switch (Data_Address)
 									{
@@ -285,7 +318,7 @@ void Union_ModBus2_Communication(void)
 																	{
 																		for(Index_Address = 1; Index_Address <= 10; Index_Address ++)
 											 								{
-											 									JiZu[Index_Address].Slave_D.StartFlag = 0; //������ȫ���������ģʽ
+											 									JiZu[Index_Address].Slave_D.StartFlag = 0; //������ȫ���������ģ�?
 											 									JiZu[Index_Address].Slave_D.Realys_Out = 0;  //��ʼ�����м̵���
 											 									SlaveG[Index_Address].Out_Power = 0;
 											 								}
@@ -593,7 +626,7 @@ void Union_ModBus2_Communication(void)
 												
 									 			ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 									 			break;
-									case 31:  //���ϱ����������
+									case 31:  //���ϱ����������?
 												UnionLCD.UnionD.Alarm_OFF = Buffer_Data16;												
 												AUnionD.Alarm_OFF = UnionLCD.UnionD.Alarm_OFF;
 												
@@ -660,7 +693,7 @@ void Union_ModBus2_Communication(void)
 												
 									 			ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 									 			break;
-									case 40:  //�ܿ���ر���������־
+									case 40:  //�ܿ���ر����������?
 												
 												UnionLCD.UnionD.Alarm_Allow_Flag = Buffer_Data16;												
 												AUnionD.Alarm_Allow_Flag = UnionLCD.UnionD.Alarm_Allow_Flag;
@@ -669,11 +702,11 @@ void Union_ModBus2_Communication(void)
 									 			ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 									 			break;
 
-									case 41:  //�ܿؼ̵������
+									case 41:  //�ܿؼ̵������?
 												
 												UnionLCD.UnionD.ZongKong_RelaysOut = Buffer_Data16;												
 												AUnionD.ZongKong_RelaysOut = UnionLCD.UnionD.ZongKong_RelaysOut;
-												if(Buffer_Data16 & 0x0001)   //�����־λ
+												if(Buffer_Data16 & 0x0001)   //�����־�?
 													{
 														
 														ZongKong_YanFa_Open();
@@ -688,7 +721,7 @@ void Union_ModBus2_Communication(void)
 									 			ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 									 			break;
 									
-									case 101:// A1���ʵ������ָ����ֶ�ģʽ����Ч
+									case 101:// A1���ʵ������ָ��?���ֶ�ģʽ����Ч
 																					
 												 
 												SlaveG[1].Out_Power = Buffer_Data16;
@@ -705,13 +738,13 @@ void Union_ModBus2_Communication(void)
 									
 											break;
 									
-									case 113:// A1�̵������ָ����ֶ�ģʽ����Ч
+									case 113:// A1�̵������ָ��?���ֶ�ģʽ����Ч
 
 												JiZu[1].Slave_D.Realys_Out = Buffer_Data16;
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 
 											break;
-									case 114:// A1����ʱ���ֵ
+									case 114:// A1����ʱ����?
 												if(Buffer_Data16 < 60 &&Buffer_Data16 >=30)
 													{
 														JiZu[1].Slave_D.DianHuo_Value = Buffer_Data16;
@@ -719,7 +752,7 @@ void Union_ModBus2_Communication(void)
 													}
 
 											break;
-									case 115:// A1����ʱ���ֵ
+									case 115:// A1����ʱ����?
 												if(Buffer_Data16 >=30 && Buffer_Data16 <= 100)
 													{
 														JiZu[1].Slave_D.Max_Power = Buffer_Data16;
@@ -737,8 +770,8 @@ void Union_ModBus2_Communication(void)
 											break;
 
 
-									//*****************A222222������صĿ���ָ��*********************8		
-									case 121:// A2���ʵ������ָ����ֶ�ģʽ����Ч
+									//*****************A222222������صĿ���ָ��?*********************8		
+									case 121:// A2���ʵ������ָ��?���ֶ�ģʽ����Ч
 									
 												SlaveG[2].Out_Power = Buffer_Data16;
 												JiZu[2].Slave_D.Power = Buffer_Data16;
@@ -753,13 +786,13 @@ void Union_ModBus2_Communication(void)
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 									
 											break;
-									case 133:// A1�̵������ָ����ֶ�ģʽ����Ч
+									case 133:// A1�̵������ָ��?���ֶ�ģʽ����Ч
 
 												JiZu[2].Slave_D.Realys_Out = Buffer_Data16;
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 
 											break;
-									case 134:// A2����ʱ���ֵ
+									case 134:// A2����ʱ����?
 												if(Buffer_Data16 < 60 &&Buffer_Data16 >=30)
 													{
 														JiZu[2].Slave_D.DianHuo_Value = Buffer_Data16;
@@ -767,7 +800,7 @@ void Union_ModBus2_Communication(void)
 													}
 
 											break;
-									case 135:// A2����ʱ���ֵ
+									case 135:// A2����ʱ����?
 												if(Buffer_Data16 >=30 && Buffer_Data16 <= 100)
 													{
 														JiZu[2].Slave_D.Max_Power = Buffer_Data16;
@@ -784,8 +817,8 @@ void Union_ModBus2_Communication(void)
 
 											break;
 
-									//*****************A3333333������صĿ���ָ��*********************8		
-									case 141:// A3���ʵ������ָ����ֶ�ģʽ����Ч
+									//*****************A3333333������صĿ���ָ��?*********************8		
+									case 141:// A3���ʵ������ָ��?���ֶ�ģʽ����Ч
 									
 												SlaveG[3].Out_Power = Buffer_Data16;
 												JiZu[3].Slave_D.Power = Buffer_Data16;
@@ -800,14 +833,14 @@ void Union_ModBus2_Communication(void)
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 									
 											break;
-									case 153:// A3�̵������ָ����ֶ�ģʽ����Ч
+									case 153:// A3�̵������ָ��?���ֶ�ģʽ����Ч
 
 												JiZu[3].Slave_D.Realys_Out = Buffer_Data16;
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 
 											break;
 									
-									case 154:// A3����ʱ���ֵ
+									case 154:// A3����ʱ����?
 												if(Buffer_Data16 < 60 &&Buffer_Data16 >=30)
 													{
 														JiZu[3].Slave_D.DianHuo_Value = Buffer_Data16;
@@ -815,7 +848,7 @@ void Union_ModBus2_Communication(void)
 													}
 
 											break;
-									case 155:// A3����ʱ���ֵ
+									case 155:// A3����ʱ����?
 												if(Buffer_Data16 >=30 && Buffer_Data16 <= 100)
 													{
 														JiZu[3].Slave_D.Max_Power = Buffer_Data16;
@@ -832,8 +865,8 @@ void Union_ModBus2_Communication(void)
 
 											break;
 									
-									//*****************A4444444������صĿ���ָ��*********************8		
-									case 161:// A4���ʵ������ָ����ֶ�ģʽ����Ч
+									//*****************A4444444������صĿ���ָ��?*********************8		
+									case 161:// A4���ʵ������ָ��?���ֶ�ģʽ����Ч
 									
 												SlaveG[4].Out_Power = Buffer_Data16;
 												JiZu[4].Slave_D.Power = Buffer_Data16;
@@ -848,14 +881,14 @@ void Union_ModBus2_Communication(void)
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 									
 											break;
-									case 173:// A4�̵������ָ����ֶ�ģʽ����Ч
+									case 173:// A4�̵������ָ��?���ֶ�ģʽ����Ч
 
 												JiZu[4].Slave_D.Realys_Out = Buffer_Data16;
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 
 											break;
 									
-									case 174:// A3����ʱ���ֵ
+									case 174:// A3����ʱ����?
 												if(Buffer_Data16 < 60 &&Buffer_Data16 >=30)
 													{
 														JiZu[4].Slave_D.DianHuo_Value = Buffer_Data16;
@@ -863,7 +896,7 @@ void Union_ModBus2_Communication(void)
 													}
 
 											break;
-									case 175:// A3����ʱ���ֵ
+									case 175:// A3����ʱ����?
 												if(Buffer_Data16 >=30 && Buffer_Data16 <= 100)
 													{
 														JiZu[4].Slave_D.Max_Power = Buffer_Data16;
@@ -879,8 +912,8 @@ void Union_ModBus2_Communication(void)
 													}
 
 											break;
-									//*****************A5555555������صĿ���ָ��*********************8		
-									case 181:// A5���ʵ������ָ����ֶ�ģʽ����Ч
+									//*****************A5555555������صĿ���ָ��?*********************8		
+									case 181:// A5���ʵ������ָ��?���ֶ�ģʽ����Ч
 									
 												SlaveG[5].Out_Power = Buffer_Data16;
 												JiZu[5].Slave_D.Power = Buffer_Data16;
@@ -895,14 +928,14 @@ void Union_ModBus2_Communication(void)
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 									
 											break;
-									case 193:// A5�̵������ָ����ֶ�ģʽ����Ч
+									case 193:// A5�̵������ָ��?���ֶ�ģʽ����Ч
 
 												JiZu[5].Slave_D.Realys_Out = Buffer_Data16;
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 
 											break;
 									
-									case 194:// A5����ʱ���ֵ
+									case 194:// A5����ʱ����?
 												if(Buffer_Data16 < 60 &&Buffer_Data16 >=30)
 													{
 														JiZu[5].Slave_D.DianHuo_Value = Buffer_Data16;
@@ -910,7 +943,7 @@ void Union_ModBus2_Communication(void)
 													}
 
 											break;
-									case 195:// A5����ʱ���ֵ
+									case 195:// A5����ʱ����?
 												if(Buffer_Data16 >=30 && Buffer_Data16 <= 100)
 													{
 														JiZu[5].Slave_D.Max_Power = Buffer_Data16;
@@ -926,8 +959,8 @@ void Union_ModBus2_Communication(void)
 													}
 
 											break;
-									//*****************A6666666������صĿ���ָ��*********************8		
-									case 201:// A6���ʵ������ָ����ֶ�ģʽ����Ч
+									//*****************A6666666������صĿ���ָ��?*********************8		
+									case 201:// A6���ʵ������ָ��?���ֶ�ģʽ����Ч
 									
 												SlaveG[6].Out_Power = Buffer_Data16;
 												JiZu[6].Slave_D.Power = Buffer_Data16;
@@ -942,14 +975,14 @@ void Union_ModBus2_Communication(void)
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 									
 											break;
-									case 213:// A6�̵������ָ����ֶ�ģʽ����Ч
+									case 213:// A6�̵������ָ��?���ֶ�ģʽ����Ч
 
 												JiZu[6].Slave_D.Realys_Out = Buffer_Data16;
 												ModuBus2LCD_Write0x10Response(Data_Address,Buffer_Data16);
 
 											break;
 									
-									case 214:// A6����ʱ���ֵ
+									case 214:// A6����ʱ����?
 												if(Buffer_Data16 < 60 &&Buffer_Data16 >=30)
 													{
 														JiZu[6].Slave_D.DianHuo_Value = Buffer_Data16;
@@ -957,7 +990,7 @@ void Union_ModBus2_Communication(void)
 													}
 
 											break;
-									case 215:// A6����ʱ���ֵ
+									case 215:// A6����ʱ����?
 												if(Buffer_Data16 >=30 && Buffer_Data16 <= 100)
 													{
 														JiZu[6].Slave_D.Max_Power = Buffer_Data16;
@@ -995,10 +1028,10 @@ void Union_ModBus2_Communication(void)
 					U2_Inf.RX_Data[i] = 0x00;
 			
 #ifdef USE_NEW_UART_DRIVER
-			/* 新驱动: 清除接收完成标志 */
+			/* 新驱�?: 清除接收完成标志 */
 				uartClearRxFlag(&uartDisplayHandle);
 #else
-			/* 旧驱动: 重新开启中断 */
+			/* 旧驱�?: 重新开�?�?�? */
 				USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
 #endif
 				
@@ -1030,11 +1063,15 @@ uint8 ModuBus2LCD_Write0x10Response(uint16 address,uint16 Data16)
 	U2_Inf.TX_Data[4] = Data16 >> 8;  //���ݸ��ֽ�
 	U2_Inf.TX_Data[5] = Data16 & 0x00ff;   //���ݵ��ֽ�
 
-	check_sum  = ModBusCRC16(U2_Inf.TX_Data,8);   //����������ֽ����ı�
+	check_sum  = ModBusCRC16(U2_Inf.TX_Data,8);   //����������ֽ����ı�?
 	U2_Inf.TX_Data[6]  = check_sum >> 8 ;
 	U2_Inf.TX_Data[7]  = check_sum & 0x00FF;
 
+#ifdef USE_NEW_UART_DRIVER
+	uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, 8);
+#else
 	Usart_SendStr_length(USART2,U2_Inf.TX_Data,8);
+#endif
 
 	return 0;
 }
@@ -1145,14 +1182,21 @@ uint8 Jizu_ReadResponse(uint8 address)
 	Bytes = sizeof(JiZu[address].Datas);
 	U2_Inf.TX_Data[0] = 0x01;
 	U2_Inf.TX_Data[1]= 0x03;
-	U2_Inf.TX_Data[2] = Bytes; //�������ݳ��ȸı�
+	U2_Inf.TX_Data[2] = Bytes;
 	for(index = 3; index < (Bytes + 3); index ++)
-		U2_Inf.TX_Data[index] = JiZu[address].Datas[index -3]; //�������ַ����
+		U2_Inf.TX_Data[index] = JiZu[address].Datas[index -3];
 		
-	checksum  = ModBusCRC16(U2_Inf.TX_Data,Bytes + 5);
+	checksum  = ModBusCRC16(U2_Inf.TX_Data, Bytes + 5);
 	U2_Inf.TX_Data[Bytes + 3] = checksum >> 8;
 	U2_Inf.TX_Data[Bytes + 4] = checksum & 0x00FF;
+	
+	u1_printf("TX Jizu[%d]: len=%d\n", address, Bytes + 5);  /* ���� */
+	
+#ifdef USE_NEW_UART_DRIVER
+	uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
+#else
 	Usart_SendStr_length(USART2,U2_Inf.TX_Data,Bytes +5);
+#endif
 
 		return 0;
 }
@@ -1194,7 +1238,11 @@ uint8 LCD4013_MmodBus2_Communicastion( )
 							U2_Inf.TX_Data[Bytes + 3] = checksum >> 8;
 							U2_Inf.TX_Data[Bytes + 4] = checksum & 0x00FF;
 							
+#ifdef USE_NEW_UART_DRIVER
+				 			uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
+#else
 				 			Usart_SendStr_length(USART2,U2_Inf.TX_Data,Bytes +5);
+#endif
 
 							break;
 					default:
@@ -1243,7 +1291,7 @@ uint8 LCD4013_MmodBus2_Communicastion( )
 
 												break;
 										case 3://�ֶ�ģʽ
-												//ֻ���ڴ�������½����ֶ�
+												//ֻ���ڴ�������½����ֶ�?
 												if(sys_data.Data_10H == 0)
 													{
 														LCD4013X.DLCD.Relays_Out = 0;
@@ -1271,7 +1319,7 @@ uint8 LCD4013_MmodBus2_Communicastion( )
 
 									break;
 
-						case 0x0004:  //�ֶ��������
+						case 0x0004:  //�ֶ��������?
 									if(Buffer_Data16 <= 100)
 										{
 											LCD4013X.DLCD.Air_Power = Buffer_Data16;
@@ -1281,7 +1329,7 @@ uint8 LCD4013_MmodBus2_Communicastion( )
 										}
 
 									break;
-						case 0x000E: //�����
+						case 0x000E: //�����?
 									if(Buffer_Data16 < 60 &&Buffer_Data16 >=30)
 										{
 											LCD4013X.DLCD.Dian_Huo_Power = Buffer_Data16;
@@ -1291,7 +1339,7 @@ uint8 LCD4013_MmodBus2_Communicastion( )
 										}
 
 									break;
-						case 0x000F: //�����
+						case 0x000F: //�����?
 									if(Buffer_Data16 <= 100 &&Buffer_Data16 >=30)
 										{
 											LCD4013X.DLCD.Max_Work_Power = Buffer_Data16;
@@ -1311,11 +1359,11 @@ uint8 LCD4013_MmodBus2_Communicastion( )
 										}
 
 									break;
-						case 0x0016: //�ֶ�ģʽ�£��̵����������
+						case 0x0016: //�ֶ�ģʽ�£��̵����������?
 									
 									//���ֶ�ģʽ�£����ݱ�־λ����Ӧ�ļ̵���
 										LCD4013X.DLCD.Relays_Out = 	Buffer_Data16;										
-										if(Buffer_Data16 & 0x0001)	 //�����־λ
+										if(Buffer_Data16 & 0x0001)	 //�����־�?
 											{
 												
 												Send_Air_Open();
@@ -1356,7 +1404,7 @@ uint8 LCD4013_MmodBus2_Communicastion( )
 											}
 
 									break;
-						case 0x0020: //�����ַ����
+						case 0x0020: //�����ַ����?
 									if(Buffer_Data16 <= 6 &&Buffer_Data16 >=1)
 										{
 											LCD4013X.DLCD.Address = Buffer_Data16;
@@ -1485,7 +1533,7 @@ uint8  ModBus2LCD4013_Lcd7013_Communication(void)
 	LCD4013_Data_Check_Function();
 
 #ifdef USE_NEW_UART_DRIVER
-	/* 新驱动: 检查DMA接收完成标志 */
+	/* 新驱�?: 检�?DMA接收完成标志 */
 	if (uartIsRxReady(&uartDisplayHandle))
 	{
 		if (uartGetRxData(&uartDisplayHandle, &rxData, &rxLen) == UART_OK)
@@ -1502,7 +1550,7 @@ uint8  ModBus2LCD4013_Lcd7013_Communication(void)
 	{
 		U2_Inf.Recive_Ok_Flag = 0;
 #ifndef USE_NEW_UART_DRIVER
-		/* 旧驱动: 关闭中断 */
+		/* 旧驱�?: 关闭�?�? */
 		USART_ITConfig(USART2, USART_IT_RXNE, DISABLE);
 #endif
 		 
@@ -1523,10 +1571,10 @@ uint8  ModBus2LCD4013_Lcd7013_Communication(void)
 			U2_Inf.RX_Data[Index] = 0x00;
 		
 #ifdef USE_NEW_UART_DRIVER
-		/* 新驱动: 清除接收完成标志 */
+		/* 新驱�?: 清除接收完成标志 */
 		uartClearRxFlag(&uartDisplayHandle);
 #else
-		/* 旧驱动: 重新开启中断 */
+		/* 旧驱�?: 重新开�?�?�? */
 		USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
 #endif
 	}
@@ -1559,7 +1607,7 @@ uint8  LCD4013_Data_Check_Function(void)
 	sys_flag.Address_Number = LCD4013X.DLCD.Address;
 	
 	LCD4013X.DLCD.Device_State = sys_data.Data_10H;
-	//������־�ڴ���4������Ƿ��յ�������Ϣ
+	//������־�ڴ���4������Ƿ��յ��������?
 
 	LCD4013X.DLCD.Error_Code = sys_flag.Error_Code;
 
