@@ -509,6 +509,7 @@ void UART5_IRQHandler(void)  //����5�жϷ������
 }	
 
 
+#ifdef USE_NEW_UART_DRIVER
 /**
  * @brief  DMA1通道7中断处理 - USART2发送完成
  */
@@ -524,6 +525,7 @@ void DMA1_Channel2_IRQHandler(void)
 {
     uartDmaTxIrqHandler(&uartSlaveHandle);
 }
+#endif /* USE_NEW_UART_DRIVER */
 
 
 

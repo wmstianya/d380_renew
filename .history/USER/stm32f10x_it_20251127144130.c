@@ -26,7 +26,7 @@
 #include "main.h"
 #include "uart_driver.h"
 
-/* 此版本使用DMA+双缓冲UART驱动 (dma-only分支) */
+/* USE_NEW_UART_DRIVER 宏已在 uart_driver.h 中统一定义 */
 
 
 //extern		uint8 re4_time		 ;	
@@ -509,6 +509,7 @@ void UART5_IRQHandler(void)  //����5�жϷ������
 }	
 
 
+#ifdef USE_NEW_UART_DRIVER
 /**
  * @brief  DMA1通道7中断处理 - USART2发送完成
  */
@@ -524,6 +525,7 @@ void DMA1_Channel2_IRQHandler(void)
 {
     uartDmaTxIrqHandler(&uartSlaveHandle);
 }
+#endif /* USE_NEW_UART_DRIVER */
 
 
 

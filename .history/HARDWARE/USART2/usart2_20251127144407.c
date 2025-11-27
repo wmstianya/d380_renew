@@ -1492,12 +1492,15 @@ uint8  ModBus2LCD4013_Lcd7013_Communication(void)
 	uint8 Index = 0;
 	uint8 Modbus_Address = 0;
 	uint16 checksum = 0;
+#ifdef USE_NEW_UART_DRIVER
 	uint8_t* rxData;
 	uint16_t rxLen;
+#endif
 
 	LCD4013_Data_Check_Function();
 
-	/* DMA接收: 检查接收完成标志 */
+#ifdef USE_NEW_UART_DRIVER
+	/* 鏂伴┍鍔?: 妫�鏌?DMA鎺ユ敹瀹屾垚鏍囧織 */
 	if (uartIsRxReady(&uartDisplayHandle))
 	{
 		if (uartGetRxData(&uartDisplayHandle, &rxData, &rxLen) == UART_OK)
@@ -1508,10 +1511,15 @@ uint8  ModBus2LCD4013_Lcd7013_Communication(void)
 			U2_Inf.Recive_Ok_Flag = 1;
 		}
 	}
+#endif
 
 	if(U2_Inf.Recive_Ok_Flag)
 	{
 		U2_Inf.Recive_Ok_Flag = 0;
+#ifndef USE_NEW_UART_DRIVER
+		/* 鏃ч┍鍔?: 鍏抽棴涓?鏂? */
+		USART_ITConfig(USART2, USART_IT_RXNE, DISABLE);
+#endif
 		 
 		checksum = U2_Inf.RX_Data[U2_Inf.RX_Length - 2] * 256 + U2_Inf.RX_Data[U2_Inf.RX_Length - 1];
 			
@@ -1525,12 +1533,17 @@ uint8  ModBus2LCD4013_Lcd7013_Communication(void)
 			}
 		}
 
-		/* 清空接收缓冲 */
+		/* 娓呯┖鎺ユ敹缂撳啿 */
 		for(Index = 0; Index < 200; Index++)
 			U2_Inf.RX_Data[Index] = 0x00;
 		
-		/* DMA驱动: 清除接收完成标志 */
+#ifdef USE_NEW_UART_DRIVER
+		/* 鏂伴┍鍔?: 娓呴櫎鎺ユ敹瀹屾垚鏍囧織 */
 		uartClearRxFlag(&uartDisplayHandle);
+#else
+		/* 鏃ч┍鍔?: 閲嶆柊寮�鍚?涓?鏂? */
+		USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+#endif
 	}
 
 	return 0;

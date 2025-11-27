@@ -184,7 +184,7 @@ int main(void)
 	
 	while(1)
 	{	
-#if UART_LOOPBACK_TEST_ENABLE
+#if UART_LOOPBACK_TEST_ENABLE && defined(USE_NEW_UART_DRIVER)
 		/* 回环测试处理 */
 		IWDG_Feed();
 		if (uartTestProcess())

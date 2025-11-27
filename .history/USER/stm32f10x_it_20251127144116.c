@@ -26,7 +26,7 @@
 #include "main.h"
 #include "uart_driver.h"
 
-/* 此版本使用DMA+双缓冲UART驱动 (dma-only分支) */
+/* USE_NEW_UART_DRIVER 宏已在 uart_driver.h 中统一定义 */
 
 
 //extern		uint8 re4_time		 ;	
@@ -394,7 +394,8 @@ void USART2_IRQHandler(void)              //串口2中断服务函数
 
 void USART3_IRQHandler(void)              //串口3中断服务函数
 {
-    /* DMA + IDLE中断处理 */
+#ifdef USE_NEW_UART_DRIVER
+    /* 使用新驱动: DMA + IDLE中断处理 */
     uartIdleIrqHandler(&uartSlaveHandle);
     
     /* 处理错误标志 */
@@ -413,6 +414,46 @@ void USART3_IRQHandler(void)              //串口3中断服务函数
         USART_ReceiveData(USART3);
         USART_ClearFlag(USART3, USART_FLAG_FE);
     }
+#else
+    /* 旧驱动: 逐字节中断处理 */
+    uint8 Res = 0;
+    if(USART_GetITStatus(USART3, USART_IT_RXNE) != RESET)
+    {
+        USART_ClearITPendingBit(USART3, USART_IT_RXNE);
+        Res = USART_ReceiveData(USART3);
+        if(U3_Inf.Rx_temp_length == 0 && U3_Inf.Recive_Ok_Flag == 0)
+        {
+            U3_Inf.RX_Data[0] = Res;
+            U3_Inf.Rx_temp_length++;
+            U3_Inf.Recive_Flag = 1;
+            U3_Inf.Recive_Time = 0;
+        }
+        else if(U3_Inf.Rx_temp_length > 0 && U3_Inf.Recive_Ok_Flag == 0)
+        {
+            if(U3_Inf.Rx_temp_length > 250)
+                U3_Inf.Rx_temp_length = 0;
+            U3_Inf.RX_Data[U3_Inf.Rx_temp_length] = Res;
+            U3_Inf.Rx_temp_length++;
+            U3_Inf.Recive_Time = 0;
+        }
+    }
+
+    if(USART_GetFlagStatus(USART3, USART_FLAG_ORE) == SET)
+    {
+        USART_ClearFlag(USART3, USART_FLAG_ORE);
+        USART_ReceiveData(USART3);
+    }
+    if (USART_GetFlagStatus(USART3, USART_FLAG_PE) != RESET)
+    {
+        USART_ReceiveData(USART3);
+        USART_ClearFlag(USART3, USART_FLAG_PE);
+    }
+    if (USART_GetFlagStatus(USART3, USART_FLAG_FE) != RESET)
+    {
+        USART_ReceiveData(USART3);
+        USART_ClearFlag(USART3, USART_FLAG_FE);
+    }
+#endif
 }
 
 
@@ -509,6 +550,7 @@ void UART5_IRQHandler(void)  //����5�жϷ������
 }	
 
 
+#ifdef USE_NEW_UART_DRIVER
 /**
  * @brief  DMA1通道7中断处理 - USART2发送完成
  */
@@ -524,6 +566,7 @@ void DMA1_Channel2_IRQHandler(void)
 {
     uartDmaTxIrqHandler(&uartSlaveHandle);
 }
+#endif /* USE_NEW_UART_DRIVER */
 
 
 

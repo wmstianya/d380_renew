@@ -3,12 +3,15 @@
  * @brief   UART驱动兼容层 - 提供与旧代码兼容的接口
  * @author  System
  * @date    2025-11-26
- * @version 1.0
+ * @version 2.0 (dma-only)
  * 
  * @note    包含此头文件可使旧代码无缝迁移到新驱动
  *          提供U2_Inf/U3_Inf结构体的映射
  * 
+ * @warning 此版本为DMA专用版本，已移除旧驱动支持
+ * 
  * 修订历史:
+ * - 2.0 (2025-11-27): dma-only分支，移除条件编译
  * - 1.0 (2025-11-26): 初始版本
  */
 
@@ -121,24 +124,16 @@ void U3_ClearRxFlag(void);
 
 
 /*============================================================================*/
-/*                         新旧中断处理切换宏                                 */
+/*                         中断处理宏 (DMA专用)                               */
 /*============================================================================*/
 
 /**
- * @brief 启用新UART驱动的中断处理
- * @note  在stm32f10x_it.c中定义此宏以使用新驱动
- */
-/* #define USE_NEW_UART_DRIVER */
-
-#ifdef USE_NEW_UART_DRIVER
-
-/**
- * @brief USART2中断处理宏 (使用新驱动)
+ * @brief USART2中断处理宏
  */
 #define USART2_IRQ_HANDLER_NEW()  uartIdleIrqHandler(&uartDisplayHandle)
 
 /**
- * @brief USART3中断处理宏 (使用新驱动)
+ * @brief USART3中断处理宏
  */
 #define USART3_IRQ_HANDLER_NEW()  uartIdleIrqHandler(&uartSlaveHandle)
 
@@ -151,8 +146,6 @@ void U3_ClearRxFlag(void);
  * @brief DMA1_Channel2中断处理宏 (USART3 TX完成)
  */
 #define DMA1_CH2_IRQ_HANDLER_NEW()  uartDmaTxIrqHandler(&uartSlaveHandle)
-
-#endif /* USE_NEW_UART_DRIVER */
 
 
 #endif /* __UART_COMPAT_H */

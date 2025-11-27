@@ -2,8 +2,7 @@
 #include "stdarg.h"
 #include "uart_driver.h"
 
-/* 启用新UART驱动 */
-//#define USE_NEW_UART_DRIVER
+/* 此版本使用DMA+双缓冲UART驱动 (dma-only分支) */
 
   
 
@@ -120,11 +119,7 @@ uint8 FuNiSen_Read_WaterDevice_Function(void)
 					U3_Inf.TX_Data[6]  = check_sum >> 8 ;
 					U3_Inf.TX_Data[7]  = check_sum & 0x00FF;
 					
-#ifdef USE_NEW_UART_DRIVER
-					uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
-#else
-					Usart_SendStr_length(USART3,U3_Inf.TX_Data,8);
-#endif
+				uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
 				   
 					//Jump_Index = 1;
 					break;
@@ -143,11 +138,7 @@ uint8 FuNiSen_Read_WaterDevice_Function(void)
 					check_sum  = ModBusCRC16(U3_Inf.TX_Data,8);
 					U3_Inf.TX_Data[6]  = check_sum >> 8 ;
 					U3_Inf.TX_Data[7]  = check_sum & 0x00FF;			
-#ifdef USE_NEW_UART_DRIVER
-					uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
-#else
-					Usart_SendStr_length(USART3,U3_Inf.TX_Data,8);
-#endif
+				uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
 					break;
 			default:
 					Jump_Index = 0;
@@ -228,10 +219,8 @@ void ModBus_Uart3_LocalRX_Communication(void)
 	uint8 Length = 0;
 	uint16 Value_Buffer = 0;
 	uint16 checksum = 0;
-#ifdef USE_NEW_UART_DRIVER
 	uint8_t* rxData;
 	uint16_t rxLen;
-#endif
 
 	if(Sys_Admin.Water_BianPin_Enabled)
 	{
@@ -243,8 +232,7 @@ void ModBus_Uart3_LocalRX_Communication(void)
 		sys_flag.waterSend_Count = 0;	
 	}
 
-#ifdef USE_NEW_UART_DRIVER
-	/* 新驱动: 检查DMA接收完成标志 */
+	/* DMA接收: 检查接收完成标志 */
 	if (uartIsRxReady(&uartSlaveHandle))
 	{
 		if (uartGetRxData(&uartSlaveHandle, &rxData, &rxLen) == UART_OK)
@@ -255,15 +243,10 @@ void ModBus_Uart3_LocalRX_Communication(void)
 			U3_Inf.Recive_Ok_Flag = 1;
 		}
 	}
-#endif
 
 	if(U3_Inf.Recive_Ok_Flag)
 	{
 		U3_Inf.Recive_Ok_Flag = 0;
-#ifndef USE_NEW_UART_DRIVER
-		/* 旧驱动: 关闭中断 */
-		USART_ITConfig(USART3, USART_IT_RXNE, DISABLE);
-#endif
 		 
 		checksum = U3_Inf.RX_Data[U3_Inf.RX_Length - 2] * 256 + U3_Inf.RX_Data[U3_Inf.RX_Length - 1];
 		command = U3_Inf.RX_Data[1];
@@ -296,13 +279,8 @@ void ModBus_Uart3_LocalRX_Communication(void)
 		for(i = 0; i < 200; i++)
 			U3_Inf.RX_Data[i] = 0x00;
 		
-#ifdef USE_NEW_UART_DRIVER
-		/* 新驱动: 清除接收完成标志 */
+		/* DMA驱动: 清除接收完成标志 */
 		uartClearRxFlag(&uartSlaveHandle);
-#else
-		/* 旧驱动: 重新开启中断 */
-		USART_ITConfig(USART3, USART_IT_RXNE, ENABLE);
-#endif
 	}
 }
 
@@ -386,11 +364,7 @@ uint8 ModBus3_RTU_Read03(uint8 Target_Address,uint16 Data_Address,uint8 Data_Len
 		U3_Inf.TX_Data[6]= Check_Sum >> 8;
 		U3_Inf.TX_Data[7]= Check_Sum & 0x00FF;
 		
-#ifdef USE_NEW_UART_DRIVER
-		uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
-#else
-		Usart_SendStr_length(USART3,U3_Inf.TX_Data,8);
-#endif
+				uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
 
 
 	return 0;
@@ -412,11 +386,7 @@ uint8 ModBus3_RTU_Write06(uint8 Target_Address,uint16 Data_Address,uint16 Data16
 		U3_Inf.TX_Data[6]= Check_Sum >> 8;
 		U3_Inf.TX_Data[7]= Check_Sum & 0x00FF;
 
-#ifdef USE_NEW_UART_DRIVER
-		uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
-#else
-		Usart_SendStr_length(USART3,U3_Inf.TX_Data,8);
-#endif
+				uartSendDma(&uartSlaveHandle, U3_Inf.TX_Data, 8);
 
 		
 

@@ -25,12 +25,11 @@
 //2025年5月19日13:41:52 版本升级到V1.0.8,升级解决主机排烟温度报警后，调节排烟温度报警值，多次复位不掉后，主机二次启动的问题
 
 //2025年11月26日 UART驱动重构: DMA + 双缓冲 + IDLE中断
-//2025年11月27日 dma-only分支: 移除旧驱动，仅保留DMA版本
 #include "main.h"
 #include "uart_driver.h"
 #include "uart_test.h"
 
-/* 此版本使用DMA+双缓冲UART驱动 (dma-only分支) */
+/* USE_NEW_UART_DRIVER 宏已在 uart_driver.h 中统一定义 */
 
 extern volatile uint32_t sysTickCount; /* 引用系统时钟计数器 */
 
@@ -184,7 +183,7 @@ int main(void)
 	
 	while(1)
 	{	
-#if UART_LOOPBACK_TEST_ENABLE
+#if UART_LOOPBACK_TEST_ENABLE && defined(USE_NEW_UART_DRIVER)
 		/* 回环测试处理 */
 		IWDG_Feed();
 		if (uartTestProcess())

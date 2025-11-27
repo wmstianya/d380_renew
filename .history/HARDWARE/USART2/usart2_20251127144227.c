@@ -178,6 +178,10 @@ void Union_ModBus2_Communication(void)
 		if(U2_Inf.Recive_Ok_Flag)
 			{
 				U2_Inf.Recive_Ok_Flag = 0;
+#ifndef USE_NEW_UART_DRIVER
+				/* æ—§é©±åŠ?: å…³é—­ä¸?æ–? */
+				USART_ITConfig(USART2, USART_IT_RXNE, DISABLE);
+#endif
 				 
 				checksum  = U2_Inf.RX_Data[U2_Inf.RX_Length - 2] * 256 + U2_Inf.RX_Data[U2_Inf.RX_Length - 1];
 				
@@ -220,7 +224,11 @@ void Union_ModBus2_Communication(void)
 												U2_Inf.TX_Data[Bytes + 3] = checksum >> 8;
 												U2_Inf.TX_Data[Bytes + 4] = checksum & 0x00FF;
 												
+#ifdef USE_NEW_UART_DRIVER
 									 			uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
+#else
+									 			Usart_SendStr_length(USART2,U2_Inf.TX_Data,Bytes +5);
+#endif
 
 											
 									 			break;
@@ -239,7 +247,11 @@ void Union_ModBus2_Communication(void)
 												U2_Inf.TX_Data[Bytes + 3] = checksum >> 8;
 												U2_Inf.TX_Data[Bytes + 4] = checksum & 0x00FF;
 												
+#ifdef USE_NEW_UART_DRIVER
 									 			uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
+#else
+									 			Usart_SendStr_length(USART2,U2_Inf.TX_Data,Bytes +5);
+#endif
 
 												break;
 									case 0x0077://È¡ï¿½ï¿½ï¿½ï¿½2ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
@@ -1007,12 +1019,17 @@ void Union_ModBus2_Communication(void)
 					
 				 
 				
-		/* Çå¿Õ½ÓÊÕ»º³å */
-			for( i = 0; i < 200;i++ )
-				U2_Inf.RX_Data[i] = 0x00;
-		
-		/* DMAÇý¶¯: Çå³ý½ÓÊÕÍê³É±êÖ¾ */
-			uartClearRxFlag(&uartDisplayHandle);
+			/* æ¸…ç©ºæŽ¥æ”¶ç¼“å†² */
+				for( i = 0; i < 200;i++ )
+					U2_Inf.RX_Data[i] = 0x00;
+			
+#ifdef USE_NEW_UART_DRIVER
+			/* æ–°é©±åŠ?: æ¸…é™¤æŽ¥æ”¶å®Œæˆæ ‡å¿— */
+				uartClearRxFlag(&uartDisplayHandle);
+#else
+			/* æ—§é©±åŠ?: é‡æ–°å¼€å?ä¸?æ–? */
+				USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+#endif
 				
 			}
 
@@ -1046,7 +1063,11 @@ uint8 ModuBus2LCD_Write0x10Response(uint16 address,uint16 Data16)
 	U2_Inf.TX_Data[6]  = check_sum >> 8 ;
 	U2_Inf.TX_Data[7]  = check_sum & 0x00FF;
 
+#ifdef USE_NEW_UART_DRIVER
 	uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, 8);
+#else
+	Usart_SendStr_length(USART2,U2_Inf.TX_Data,8);
+#endif
 
 	return 0;
 }
@@ -1167,7 +1188,11 @@ uint8 Jizu_ReadResponse(uint8 address)
 	
 	u1_printf("TX Jizu[%d]: len=%d\n", address, Bytes + 5);  /* µ÷ÊÔ */
 	
+#ifdef USE_NEW_UART_DRIVER
 	uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
+#else
+	Usart_SendStr_length(USART2,U2_Inf.TX_Data,Bytes +5);
+#endif
 
 		return 0;
 }
@@ -1205,13 +1230,17 @@ uint8 LCD4013_MmodBus2_Communicastion( )
 								U2_Inf.TX_Data[index] = LCD4013X.Datas[index -3];
 							
 						
-			 			checksum  = ModBusCRC16(U2_Inf.TX_Data,Bytes + 5);
-						U2_Inf.TX_Data[Bytes + 3] = checksum >> 8;
-						U2_Inf.TX_Data[Bytes + 4] = checksum & 0x00FF;
-						
-			 			uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
+				 			checksum  = ModBusCRC16(U2_Inf.TX_Data,Bytes + 5);
+							U2_Inf.TX_Data[Bytes + 3] = checksum >> 8;
+							U2_Inf.TX_Data[Bytes + 4] = checksum & 0x00FF;
+							
+#ifdef USE_NEW_UART_DRIVER
+				 			uartSendDma(&uartDisplayHandle, U2_Inf.TX_Data, Bytes + 5);
+#else
+				 			Usart_SendStr_length(USART2,U2_Inf.TX_Data,Bytes +5);
+#endif
 
-						break;
+							break;
 					default:
 							break;
 								
@@ -1492,12 +1521,15 @@ uint8  ModBus2LCD4013_Lcd7013_Communication(void)
 	uint8 Index = 0;
 	uint8 Modbus_Address = 0;
 	uint16 checksum = 0;
+#ifdef USE_NEW_UART_DRIVER
 	uint8_t* rxData;
 	uint16_t rxLen;
+#endif
 
 	LCD4013_Data_Check_Function();
 
-	/* DMA½ÓÊÕ: ¼ì²é½ÓÊÕÍê³É±êÖ¾ */
+#ifdef USE_NEW_UART_DRIVER
+	/* æ–°é©±åŠ?: æ£€æŸ?DMAæŽ¥æ”¶å®Œæˆæ ‡å¿— */
 	if (uartIsRxReady(&uartDisplayHandle))
 	{
 		if (uartGetRxData(&uartDisplayHandle, &rxData, &rxLen) == UART_OK)
@@ -1508,10 +1540,15 @@ uint8  ModBus2LCD4013_Lcd7013_Communication(void)
 			U2_Inf.Recive_Ok_Flag = 1;
 		}
 	}
+#endif
 
 	if(U2_Inf.Recive_Ok_Flag)
 	{
 		U2_Inf.Recive_Ok_Flag = 0;
+#ifndef USE_NEW_UART_DRIVER
+		/* æ—§é©±åŠ?: å…³é—­ä¸?æ–? */
+		USART_ITConfig(USART2, USART_IT_RXNE, DISABLE);
+#endif
 		 
 		checksum = U2_Inf.RX_Data[U2_Inf.RX_Length - 2] * 256 + U2_Inf.RX_Data[U2_Inf.RX_Length - 1];
 			
@@ -1525,12 +1562,17 @@ uint8  ModBus2LCD4013_Lcd7013_Communication(void)
 			}
 		}
 
-		/* Çå¿Õ½ÓÊÕ»º³å */
+		/* æ¸…ç©ºæŽ¥æ”¶ç¼“å†² */
 		for(Index = 0; Index < 200; Index++)
 			U2_Inf.RX_Data[Index] = 0x00;
 		
-		/* DMAÇý¶¯: Çå³ý½ÓÊÕÍê³É±êÖ¾ */
+#ifdef USE_NEW_UART_DRIVER
+		/* æ–°é©±åŠ?: æ¸…é™¤æŽ¥æ”¶å®Œæˆæ ‡å¿— */
 		uartClearRxFlag(&uartDisplayHandle);
+#else
+		/* æ—§é©±åŠ?: é‡æ–°å¼€å?ä¸?æ–? */
+		USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+#endif
 	}
 
 	return 0;
