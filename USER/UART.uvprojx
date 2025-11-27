@@ -823,6 +823,11 @@
               <FileType>1</FileType>
               <FilePath>..\HARDWARE\modbus\modbus_usart3.c</FilePath>
             </File>
+            <File>
+              <FileName>modbus_usart1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\modbus\modbus_usart1.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

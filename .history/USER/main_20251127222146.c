@@ -120,7 +120,6 @@ int main(void)
 #if USE_UNIFIED_MODBUS
 //***************统一ModBus协议层初始化****//
 	modbusUsart3Init();  // USART3 主机模式 (供水阀)
-	modbusUsart1Init();  // USART1 从机模式 (RTU服务器)
 #endif
 
 	
@@ -226,12 +225,8 @@ int main(void)
 		read_serial_data();	//15ms
 //1s时间到，****************************************************//
 		One_Sec_Check();
-//***********串口1 A1B1远程控制 传感器485通信解析***********//		
-#if USE_UNIFIED_MODBUS
-		modbusUsart1Scheduler();  // 统一协议层调度
-#else
+//***********串口1 A1B1远程控制 传感器485通信解析,都要根据设备类型来选择***********//		
 		ModBus_Communication();
-#endif
 //**********继电器需要过零控制，检测不到中断，需要强制处理******************************************//
 		Relays_NoInterrupt_ON_OFF();
 		//***********机器地址和设备类型的判定***********************//
