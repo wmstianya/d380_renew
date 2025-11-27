@@ -582,8 +582,8 @@ uint8_t uartUnionInit(uint32_t baudRate)
     uartUnionHandle.config.rccUsartPeriph = RCC_APB1Periph_UART4;
     uartUnionHandle.config.rccGpioPeriph  = RCC_APB2Periph_GPIOC;
     uartUnionHandle.config.nvicIrqChannel = UART4_IRQn;
-    uartUnionHandle.config.nvicPrePriority= 0;  /* 优先级1/4 - 联控(最高) */
-    uartUnionHandle.config.nvicSubPriority= 0;
+    uartUnionHandle.config.nvicPrePriority= 2;
+    uartUnionHandle.config.nvicSubPriority= 2;
     uartUnionHandle.config.dmaRxChannel   = DMA2_Channel3;
     uartUnionHandle.config.dmaTxChannel   = DMA2_Channel5;
     uartUnionHandle.config.dmaRxTcFlag    = DMA2_FLAG_TC3;

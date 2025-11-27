@@ -329,7 +329,7 @@ void UART4_Server_Cmd_Analyse(void)
 											U4_Inf.TX_Data[39]  = check_sum >> 8 ;
 											U4_Inf.TX_Data[40]  = check_sum & 0x00FF;
 											
-											Usart_SendStr_length(UART4,U4_Inf.TX_Data,41);
+											uartSendDma(&uartUnionHandle, U4_Inf.TX_Data,41);
 											
 										}
 
@@ -607,7 +607,7 @@ uint8 ModuBus4RTU_WriteResponse(uint16 address,uint16 Data16)
 	U4_Inf.TX_Data[6]  = check_sum >> 8 ;
 	U4_Inf.TX_Data[7]  = check_sum & 0x00FF;
 
-	Usart_SendStr_length(UART4,U4_Inf.TX_Data,8);
+	uartSendDma(&uartUnionHandle, U4_Inf.TX_Data,8);
 
 	return 0;
 }
@@ -636,7 +636,7 @@ uint8 ModBus4_RTU_Read03(uint8 Target_Address,uint16 Data_Address,uint8 Data_Len
 		U4_Inf.TX_Data[6]= Check_Sum >> 8;
 		U4_Inf.TX_Data[7]= Check_Sum & 0x00FF;
 		
-		Usart_SendStr_length(UART4,U4_Inf.TX_Data,8);
+		uartSendDma(&uartUnionHandle, U4_Inf.TX_Data,8);
 
 
 	return 0;
@@ -658,7 +658,7 @@ uint8 ModBus4_RTU_Write06(uint8 Target_Address,uint16 Data_Address,uint16 Data16
 		U4_Inf.TX_Data[6]= Check_Sum >> 8;
 		U4_Inf.TX_Data[7]= Check_Sum & 0x00FF;
 
-		Usart_SendStr_length(UART4,U4_Inf.TX_Data,8);
+		uartSendDma(&uartUnionHandle, U4_Inf.TX_Data,8);
 
 		
 
@@ -684,7 +684,7 @@ uint8 ModuBus4_Write0x10Response(uint8 Target_Address,uint16 Data_address,uint16
 	U4_Inf.TX_Data[6]  = check_sum >> 8 ;
 	U4_Inf.TX_Data[7]  = check_sum & 0x00FF;
 
-	Usart_SendStr_length(UART4,U4_Inf.TX_Data,8);
+	uartSendDma(&uartUnionHandle, U4_Inf.TX_Data,8);
 
 	return 0;
 }
@@ -1074,7 +1074,7 @@ uint8 ModBus4RTU_Write0x10Function(uint8 Target_Address,uint16 Data_Address,uint
 		U4_Inf.TX_Data[43]= Check_Sum >> 8;
 		U4_Inf.TX_Data[44]= Check_Sum & 0x00FF;
 
-		Usart_SendStr_length(UART4,U4_Inf.TX_Data,45);
+		uartSendDma(&uartUnionHandle, U4_Inf.TX_Data,45);
 
 			
 

@@ -53,6 +53,22 @@
 - UART4 (联控通信 9600) - DMA+IDLE正常
 - USART1 (调试/RTU 9600) - DMA+IDLE正常
 
+## 后续优化 (2025-11-27)
+
+### NVIC优先级调整
+| 串口 | PrePriority | 优先级 |
+|------|-------------|--------|
+| UART4 | 0 | 最高 - 联控通信 |
+| USART3 | 1 | 次高 - 从机设备 |
+| USART2 | 2 | 中等 - 显示屏 |
+| USART1 | 3 | 最低 - 调试 |
+
+### 发送方式统一为DMA
+- [x] USART1: `uartSendDma(&uartDebugHandle, ...)` - 4处
+- [x] USART2: `uartSendDma(&uartDisplayHandle, ...)` - 已完成
+- [x] USART3: `uartSendDma(&uartSlaveHandle, ...)` - 已完成
+- [x] UART4: `uartSendDma(&uartUnionHandle, ...)` - 6处
+
 ## 注意事项
 
 1. **DMA2时钟使能**: UART4使用DMA2，需要额外使能 `RCC_AHBPeriph_DMA2`
