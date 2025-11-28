@@ -343,23 +343,6 @@ void USART1_IRQHandler(void)              //串口1中断服务函数
 {
     /* DMA + IDLE中断处理 */
     uartIdleIrqHandler(&uartDebugHandle);
-    
-    /* 处理错误标志 */
-    if (USART_GetFlagStatus(USART1, USART_FLAG_ORE) == SET)
-    {
-        USART_ClearFlag(USART1, USART_FLAG_ORE);
-        USART_ReceiveData(USART1);
-    }
-    if (USART_GetFlagStatus(USART1, USART_FLAG_PE) != RESET)
-    {
-        USART_ReceiveData(USART1);
-        USART_ClearFlag(USART1, USART_FLAG_PE);
-    }
-    if (USART_GetFlagStatus(USART1, USART_FLAG_FE) != RESET)
-    {
-        USART_ReceiveData(USART1);
-        USART_ClearFlag(USART1, USART_FLAG_FE);
-    }
 }
 	
 	
@@ -401,23 +384,6 @@ void UART4_IRQHandler(void)              //串口4中断服务函数
 {
     /* DMA + IDLE中断处理 */
     uartIdleIrqHandler(&uartUnionHandle);
-    
-    /* 处理错误标志 */
-    if (USART_GetFlagStatus(UART4, USART_FLAG_ORE) == SET)
-    {
-        USART_ClearFlag(UART4, USART_FLAG_ORE);
-        USART_ReceiveData(UART4);
-    }
-    if (USART_GetFlagStatus(UART4, USART_FLAG_PE) != RESET)
-    {
-        USART_ReceiveData(UART4);
-        USART_ClearFlag(UART4, USART_FLAG_PE);
-    }
-    if (USART_GetFlagStatus(UART4, USART_FLAG_FE) != RESET)
-    {
-        USART_ReceiveData(UART4);
-        USART_ClearFlag(UART4, USART_FLAG_FE);
-    }
 }	
 
 void UART5_IRQHandler(void)  //����5�жϷ������

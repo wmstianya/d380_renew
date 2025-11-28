@@ -86,7 +86,22 @@ static void uartGpioConfig(UartHandle* handle)
     GPIO_InitTypeDef gpioInit;
     
     /* 使能GPIO时钟 */
-    RCC_APB2PeriphClockCmd(handle->config.rccGpioPeriph, ENABLE);
+    RCC_APB2PeriphClockCmd(handle->config.rccGpioPeriph | RCC_APB2Periph_AFIO, ENABLE);
+    
+    /* 针对USART1/2/3确保关闭重映射 (除非特定需求) */
+    if (handle->config.usartx == USART1)
+    {
+        GPIO_PinRemapConfig(GPIO_Remap_USART1, DISABLE);
+    }
+    else if (handle->config.usartx == USART2)
+    {
+        GPIO_PinRemapConfig(GPIO_Remap_USART2, DISABLE);
+    }
+    else if (handle->config.usartx == USART3)
+    {
+        GPIO_PinRemapConfig(GPIO_PartialRemap_USART3, DISABLE);
+        GPIO_PinRemapConfig(GPIO_FullRemap_USART3, DISABLE);
+    }
     
     /* 使能DMA1时钟 (USART2/3都使用DMA1) */
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
@@ -246,9 +261,6 @@ static void uartNvicConfig(UartHandle* handle)
  */
 uint8_t uartSendDma(UartHandle* handle, uint8_t* data, uint16_t len)
 {
-    /* 调试: 临时强制使用阻塞发送，排除DMA发送问题 */
-    return uartSendBlocking(handle, data, len);
-
     if (handle == NULL || data == NULL || len == 0)
         return UART_ERROR;
     

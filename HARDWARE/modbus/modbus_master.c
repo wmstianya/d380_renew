@@ -380,7 +380,7 @@ void modbusMasterMarkWrite(ModbusHandle* handle, uint8_t slaveAddr)
     uint8_t idx;
     
     if (handle == NULL) {
-        return;
+        return; 
     }
     
     idx = masterGetSlaveIndex(handle, slaveAddr);

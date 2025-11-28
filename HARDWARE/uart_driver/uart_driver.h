@@ -26,10 +26,10 @@
 /*============================================================================*/
 
 /** @brief 接收缓冲区大小 (ModBus常用帧长度，可根据需要调整) */
-#define UART_RX_BUFFER_SIZE     128
+#define UART_RX_BUFFER_SIZE     256
 
 /** @brief 发送缓冲区大小 */
-#define UART_TX_BUFFER_SIZE     128
+#define UART_TX_BUFFER_SIZE     256
 
 /** @brief 双缓冲数量 */
 #define UART_DOUBLE_BUFFER_NUM  2

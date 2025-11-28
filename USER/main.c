@@ -81,7 +81,7 @@ int main(void)
 	JTAG_Diable();
 //***************串口1 DMA驱动 for RS485 A1B1 RTU服务器****//
 	uartDebugInit(9600);  //DMA + IDLE中断模式
-
+	
 //***************串口2 DMA驱动 for 10.1寸外置的屏*****//
 	uartDisplayInit(115200);  //DMA + IDLE中断模式
 //***************串口3 DMA驱动 for 设备内部通信准备******//

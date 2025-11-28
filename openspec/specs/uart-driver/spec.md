@@ -94,14 +94,14 @@ The system MUST use double buffering to prevent data loss during processing. (�
 
 ### Requirement: DMA发送
 
-系统SHALL使用DMA进行UART数据发送。
+UART驱动 MUST 使用 DMA 通道进行数据发送，以实现非阻塞操作。
 
-#### Scenario: 发送数据
-
-- **WHEN** 调用uartSendDma()
-- **THEN** 数据通过DMA发送
-- **AND** CPU可执行其他任务
-- **AND** 发送完成触发中断清除txBusy标志
+#### Scenario: DMA发送启动
+- **GIVEN** 调用 `uartSendDma` 发送数据
+- **WHEN** 发送缓冲区空闲
+- **THEN** 数据被复制到 DMA 缓冲区
+- **AND** 启动 DMA 传输
+- **AND** 函数立即返回 `UART_OK`，不等待传输完成
 
 ### Requirement: 超时保护
 
@@ -226,6 +226,27 @@ USART3 MUST be configured for master-slave communication. (USART3必须配置为
 - **THEN** 使用ModBus RTU协议
 - **AND** 支持读写操作
 - **AND** 轮询各从机地址
+
+### Requirement: 中断处理独占性
+
+UART驱动的中断处理函数 MUST 独占管理对应的USART/UART外设中断。
+
+#### Scenario: 中断处理流程
+- **GIVEN** 发生USART中断（如IDLE或RXNE）
+- **WHEN** 进入 `USARTx_IRQHandler`
+- **THEN** 必须调用 `uartIdleIrqHandler` 处理DMA/IDLE逻辑
+- **AND** 不得包含任何直接操作DR寄存器（`USART_ReceiveData`）的旧代码
+- **AND** 不得包含任何直接清除标志位的旧代码（除非新驱动未处理）
+
+### Requirement: 时钟配置完整性
+
+初始化UART驱动时 MUST 开启所有必要的时钟，包括GPIO、USART/UART、DMA和AFIO。
+
+#### Scenario: GPIO复用配置
+- **GIVEN** 初始化UART引脚
+- **WHEN** 配置TX/RX引脚复用功能
+- **THEN** 必须开启对应的GPIO端口时钟
+- **AND** 必须开启 `RCC_APB2Periph_AFIO` 时钟以确保复用功能正常
 
 ## API参考
 

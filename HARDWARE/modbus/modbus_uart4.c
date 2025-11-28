@@ -349,97 +349,91 @@ static void uart4OnOffline(uint8_t slaveAddr)
 
 /**
  * @brief 获取写入数据回调
+ * @param slaveAddr 从机地址
+ * @param regAddr 寄存器地址 (输出)
+ * @param data 数据缓冲 (输出)
+ * @param maxLen 最大长度
+ * @return 数据长度，0表示无需写入
  */
-static uint16_t uart4GetWriteData(uint8_t slaveAddr, uint8_t* data, 
-                                   uint16_t maxLen)
+static uint16_t uart4GetWriteData(uint8_t slaveAddr, uint16_t* regAddr,
+                                   uint8_t* data, uint16_t maxLen)
 {
-    uint16_t checkSum;
     uint8_t addr = slaveAddr;
     
-    if (maxLen < 45) {
+    if (maxLen < 36) {
         return 0;
     }
     
-    /* 构造写入数据包 */
-    data[0] = slaveAddr;
-    data[1] = 0x10;
-    data[2] = 0x00;  /* 地址高字节 */
-    data[3] = 0xC8;  /* 地址低字节 = 200 */
-    data[4] = 0x00;  /* 长度高字节 */
-    data[5] = 0x12;  /* 长度低字节 = 18 */
-    data[6] = 0x24;  /* 字节数 = 36 */
+    /* 输出寄存器地址 */
+    *regAddr = 200;
     
     /* 1: 启停命令 */
-    data[7] = 0;
-    data[8] = JiZu[addr].Slave_D.StartFlag;
+    data[0] = 0;
+    data[1] = JiZu[addr].Slave_D.StartFlag;
     
     /* 2: 故障复位 */
-    data[9] = 0;
-    data[10] = JiZu[addr].Slave_D.Error_Reset;
+    data[2] = 0;
+    data[3] = JiZu[addr].Slave_D.Error_Reset;
     
     /* 3: 设备类型 */
-    data[11] = 0;
-    data[12] = AUnionD.Devive_Style;
+    data[4] = 0;
+    data[5] = AUnionD.Devive_Style;
     
     /* 4: 输出功率 */
-    data[13] = 0;
-    data[14] = SlaveG[addr].Out_Power;
+    data[6] = 0;
+    data[7] = SlaveG[addr].Out_Power;
     
     /* 5: 继电器输出 */
-    data[15] = JiZu[addr].Slave_D.Realys_Out >> 8;
-    data[16] = JiZu[addr].Slave_D.Realys_Out & 0xFF;
+    data[8] = JiZu[addr].Slave_D.Realys_Out >> 8;
+    data[9] = JiZu[addr].Slave_D.Realys_Out & 0xFF;
     
     /* 6: 空闲运行标志 */
-    data[17] = 0;
-    data[18] = SlaveG[addr].Idle_AirWork_Flag;
+    data[10] = 0;
+    data[11] = SlaveG[addr].Idle_AirWork_Flag;
     
     /* 7: 排污命令 */
-    data[19] = 0;
-    data[20] = SlaveG[addr].Paiwu_Flag;
+    data[12] = 0;
+    data[13] = SlaveG[addr].Paiwu_Flag;
     
     /* 8: 目标压力 */
-    data[21] = 0;
-    data[22] = sys_config_data.zhuan_huan_temperture_value;
+    data[14] = 0;
+    data[15] = sys_config_data.zhuan_huan_temperture_value;
     
     /* 9: 停机压力 */
-    data[23] = 0;
-    data[24] = sys_config_data.Auto_stop_pressure;
+    data[16] = 0;
+    data[17] = sys_config_data.Auto_stop_pressure;
     
     /* 10: 启动压力 */
-    data[25] = 0;
-    data[26] = sys_config_data.Auto_start_pressure;
+    data[18] = 0;
+    data[19] = sys_config_data.Auto_start_pressure;
     
     /* 11: 额定压力 */
-    data[27] = 0;
-    data[28] = Sys_Admin.DeviceMaxPressureSet;
+    data[20] = 0;
+    data[21] = Sys_Admin.DeviceMaxPressureSet;
     
     /* 12: 点火功率 */
-    data[29] = 0;
-    data[30] = JiZu[addr].Slave_D.DianHuo_Value;
+    data[22] = 0;
+    data[23] = JiZu[addr].Slave_D.DianHuo_Value;
     
     /* 13: 最大功率 */
-    data[31] = 0;
-    data[32] = JiZu[addr].Slave_D.Max_Power;
+    data[24] = 0;
+    data[25] = JiZu[addr].Slave_D.Max_Power;
     
     /* 14: 温度保护值 */
-    data[33] = JiZu[addr].Slave_D.Inside_WenDu_Protect >> 8;
-    data[34] = JiZu[addr].Slave_D.Inside_WenDu_Protect & 0xFF;
+    data[26] = JiZu[addr].Slave_D.Inside_WenDu_Protect >> 8;
+    data[27] = JiZu[addr].Slave_D.Inside_WenDu_Protect & 0xFF;
     
     /* 15: 点火存活标志 */
-    data[35] = 0;
-    data[36] = sys_flag.DianHuo_Alive;
+    data[28] = 0;
+    data[29] = sys_flag.DianHuo_Alive;
     
     /* 16-18: 预留 */
-    data[37] = 0; data[38] = 0;
-    data[39] = 0; data[40] = 0;
-    data[41] = 0; data[42] = 0;
+    data[30] = 0; data[31] = 0;
+    data[32] = 0; data[33] = 0;
+    data[34] = 0; data[35] = 0;
     
-    /* CRC */
-    checkSum = ModBusCRC16(data, 43);
-    data[43] = checkSum >> 8;
-    data[44] = checkSum & 0xFF;
-    
-    return 45;
+    /* 返回纯数据字节数 (18寄存器 = 36字节) */
+    return 36;
 }
 
 /*============================================================================*/
