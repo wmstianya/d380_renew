@@ -72,6 +72,9 @@ uint8_t uartDriverInit(UartHandle* handle)
     handle->buffer.txBusy = 0;
     handle->initialized = 1;
     
+    /* 初始化统计信息 */
+    memset(&handle->stats, 0, sizeof(UartStats));
+    
     return UART_OK;
 }
 
@@ -337,9 +340,23 @@ void uartIdleIrqHandler(UartHandle* handle)
     if (handle == NULL)
         return;
     
+    /* 统计错误 (读取SR不会清除标志) */
+    if (handle->config.usartx->SR & USART_FLAG_ORE)
+        handle->stats.overruns++;
+    if (handle->config.usartx->SR & USART_FLAG_FE)
+        handle->stats.frameErrors++;
+    if (handle->config.usartx->SR & USART_FLAG_NE)
+        handle->stats.noiseErrors++;
+    
     /* 检查IDLE标志 - 直接检查SR寄存器 */
     if ((handle->config.usartx->SR & USART_FLAG_IDLE) == 0)
+    {
+        /* 如果不是IDLE中断(可能是错误触发)，尝试清除错误标志并返回 */
+        temp = handle->config.usartx->SR;
+        temp = handle->config.usartx->DR;
+        (void)temp;
         return;
+    }
     
     /* 清除IDLE标志: 读SR + 读DR */
     temp = handle->config.usartx->SR;
@@ -354,6 +371,10 @@ void uartIdleIrqHandler(UartHandle* handle)
     
     if (rxLen > 0)
     {
+        /* 统计更新 */
+        handle->stats.rxFrames++;
+        handle->stats.rxBytes += rxLen;
+        
         /* 保存当前缓冲索引 */
         prevIdx = handle->buffer.activeRxIdx;
         handle->buffer.readyRxIdx = prevIdx;
@@ -400,7 +421,11 @@ void uartDmaTxIrqHandler(UartHandle* handle)
     if (DMA_GetITStatus(handle->config.dmaTxTcFlag) != RESET)
     {
         DMA_ClearITPendingBit(handle->config.dmaTxTcFlag);
+        DMA_Cmd(handle->config.dmaTxChannel, DISABLE); /* 停止DMA，防止误触发 */
         handle->buffer.txBusy = 0;
+        
+        /* 统计发送帧数 */
+        handle->stats.txFrames++;
     }
 }
 

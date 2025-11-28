@@ -489,7 +489,7 @@ ModbusError modbusUart4Init(void)
     }
     uart4MasterCfg.pollCount = 10;
     uart4MasterCfg.pollIntervalMs = 0;     /* 动态间隔: 收到响应立即切换 */
-    uart4MasterCfg.respTimeoutMs = 50;     /* 缩短超时: 50ms */
+    uart4MasterCfg.respTimeoutMs = 1000;   /* 响应超时: 1000ms (1秒) */
     uart4MasterCfg.maxRetry = 20;
     uart4MasterCfg.readRegAddr = 100;
     uart4MasterCfg.readRegCount = 18;

@@ -40,6 +40,19 @@
 #define UART_BUSY               2
 #define UART_TIMEOUT            3
 
+/**
+ * @brief UART通信统计结构体
+ */
+typedef struct {
+    uint32_t txFrames;      /**< 发送帧数 */
+    uint32_t rxFrames;      /**< 接收帧数 */
+    uint32_t rxBytes;       /**< 接收字节数 */
+    uint32_t overruns;      /**< 接收溢出错误 (ORE) */
+    uint32_t frameErrors;   /**< 帧格式错误 (FE) */
+    uint32_t noiseErrors;   /**< 噪声错误 (NE) */
+    uint32_t dmaErrors;     /**< DMA传输错误 */
+} UartStats;
+
 /*============================================================================*/
 /*                              类型定义                                      */
 /*============================================================================*/
@@ -111,6 +124,7 @@ typedef void (*UartRxCallback)(uint8_t* data, uint16_t len);
 typedef struct {
     UartHwConfig    config;     /**< 硬件配置 */
     UartBufferData  buffer;     /**< 缓冲区数据 */
+    UartStats       stats;      /**< 通信统计 */
     UartRxCallback  rxCallback; /**< 接收完成回调函数 (可选) */
     uint8_t         initialized;/**< 初始化完成标志 */
 } UartHandle;
