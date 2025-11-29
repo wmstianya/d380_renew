@@ -12,8 +12,6 @@
 
 #include "modbus.h"
 #include "system_control.h"
-#include "pwm_output.h"
-#include "bsp_relays.h"
 #include <string.h>
 
 /*============================================================================*/
@@ -151,7 +149,6 @@ static ModbusError uart4WriteControl(uint16_t addr, uint16_t count,
     uint8_t saveFlag1 = 0;
     uint8_t saveFlag2 = 0;
     uint16_t data16;
-    uint16_t relayCtrl;
     
     if (addr != 200 || dataLen < 36) {
         return MODBUS_ERR_PARAM;
@@ -169,54 +166,13 @@ static ModbusError uart4WriteControl(uint16_t addr, uint16_t count,
         sys_flag.Error_Code = 0;
     }
     
-    /* 4: 功率设定 (根据工作状态处理) */
-    if (data[7] <= 100) {
-        if (sys_data.Data_10H == 3) {
-            /* 手动模式: 直接调用PWM调整 */
-            PWM_Adjust(data[7]);
-        } else if (sys_data.Data_10H == 2) {
-            /* 工作模式: 仅在有火焰时设置目标功率 */
-            if (sys_flag.flame_state == FLAME_OK) {
-                sys_flag.AirPower_Need = data[7];
-            }
-        }
+    /* 4: 功率设定 */
+    if (data[7] >= 30 && data[7] <= 100) {
         LCD10D.DLCD.Air_Power = data[7];
     }
     
-    /* 5: 继电器控制 (仅手动模式有效) */
-    if (sys_data.Data_10H == 3) {
-        relayCtrl = (data[8] << 8) | data[9];
-        
-        /* Bit0: 风机控制 */
-        if (relayCtrl & 0x0001) {
-            Send_Air_Open();
-        } else {
-            Send_Air_Close();
-        }
-        
-        /* Bit1: 水泵/水阀控制 */
-        if (relayCtrl & 0x0002) {
-            Feed_Main_Pump_ON();
-            Second_Water_Valve_Open();
-        } else {
-            Feed_Main_Pump_OFF();
-            Second_Water_Valve_Close();
-        }
-        
-        /* Bit2: 排水阀控制 */
-        if (relayCtrl & 0x0004) {
-            Pai_Wu_Door_Open();
-        } else {
-            Pai_Wu_Door_Close();
-        }
-        
-        /* Bit3: 燃气阀控制 */
-        if (relayCtrl & 0x0008) {
-            WTS_Gas_One_Open();
-        } else {
-            WTS_Gas_One_Close();
-        }
-    }
+    /* 5: 继电器控制 */
+    /* LCD10D.DLCD.Relays_Out - 通过独立处理 */
     
     /* 6: 空闲运行标志 */
     sys_flag.Idle_AirWork_Flag = data[11];

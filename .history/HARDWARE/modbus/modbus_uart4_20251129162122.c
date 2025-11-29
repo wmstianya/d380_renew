@@ -185,7 +185,7 @@ static ModbusError uart4WriteControl(uint16_t addr, uint16_t count,
     
     /* 5: 继电器控制 (仅手动模式有效) */
     if (sys_data.Data_10H == 3) {
-        relayCtrl = (data[8] << 8) | data[9];
+        uint16_t relayCtrl = (data[8] << 8) | data[9];
         
         /* Bit0: 风机控制 */
         if (relayCtrl & 0x0001) {
