@@ -28,7 +28,7 @@
 //2025年11月27日 dma-only分支: 移除旧驱动，仅保留DMA版本
 #include "main.h"
 #include "uart_driver.h"
-
+#include "uart_test.h"
 
 /* 此版本使用DMA+双缓冲UART驱动 (dma-only分支) */
 
