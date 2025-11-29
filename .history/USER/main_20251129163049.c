@@ -227,7 +227,11 @@ int main(void)
 //1s时间到，****************************************************//
 		One_Sec_Check();
 //***********串口1 A1B1远程控制 传感器485通信解析***********//		
+#if USE_UNIFIED_MODBUS
 		modbusUsart1Scheduler();  // 统一协议层调度
+#else
+		ModBus_Communication();
+#endif
 //**********继电器需要过零控制，检测不到中断，需要强制处理******************************************//
 		Relays_NoInterrupt_ON_OFF();
 		//***********机器地址和设备类型的判定***********************//
@@ -285,7 +289,11 @@ int main(void)
 						//根据设备类型进行切换
 						
 						//***********串口2 10.1 LCD屏幕通信****************//
+#if USE_UNIFIED_MODBUS
 							modbusUsart2Scheduler();  // 统一协议层调度
+#else
+							Union_ModBus2_Communication();
+#endif
 						
 						switch (Sys_Admin.Device_Style)
 							{
@@ -294,11 +302,26 @@ int main(void)
 								case 2:
 								case 3:
 								//***********串口3 多机联控和本地变频补水通信，485通信解析***********//	
+#if USE_UNIFIED_MODBUS
 										modbusUsart3Scheduler();  // 统一协议层调度
+#else
+										Modbus3_UnionTx_Communication();
+										ModBus_Uart3_LocalRX_Communication();
+#endif
 								//*******还需要有联控的功能数据********************************8
 								
 								//*******处理串口4接收的数据*****************************88
+#if USE_UNIFIED_MODBUS
 										modbusUart4Scheduler();  // 统一协议层调度
+#else
+										if(sys_flag.LCD10_Connect)
+											{
+												//当有主屏连接时，再沟通从机的通信
+												Union_Modbus4_UnionTx_Communication();
+											}
+										
+										Union_ModBus_Uart4_Local_Communication();  //
+#endif
 								//***********前后吹扫，点火功率边界值检查***********//
 										Union_Check_Config_Data_Function();
 								//***********各机组联动控制程序***********//
@@ -326,9 +349,18 @@ int main(void)
 					//***********串口2 A2B2    LCD下发命令解析****************//
 						ModBus2LCD4013_Lcd7013_Communication();
 					//*******处理串口3      变频进水阀************************
+#if USE_UNIFIED_MODBUS
 						modbusUsart3Scheduler();  // 统一协议层调度
+#else
+						Modbus3_UnionTx_Communication();
+						ModBus_Uart3_LocalRX_Communication();
+#endif
 					//*******处理串口4接收的数据*****************************88
+#if USE_UNIFIED_MODBUS
 						modbusUart4Scheduler();  // 统一协议层调度
+#else
+						ModBus_Uart4_Local_Communication();  //
+#endif
 					
 					//*************锅炉主控程序+++++++设备补水功能******************//	
 						//XiangBian_Steam_AddFunction();
