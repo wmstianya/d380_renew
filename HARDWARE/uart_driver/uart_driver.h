@@ -195,9 +195,17 @@ void uartIdleIrqHandler(UartHandle* handle);
 /**
  * @brief  DMA发送完成中断处理函数
  * @param  handle: UART句柄指针
- * @note   清除发送忙标志
+ * @note   禁用DMA，启用USART TC中断等待真正发送完成
  */
 void uartDmaTxIrqHandler(UartHandle* handle);
+
+
+/**
+ * @brief  USART发送完成中断处理函数
+ * @param  handle: UART句柄指针
+ * @note   移位寄存器发送完毕后调用，清除txBusy标志
+ */
+void uartTxCompleteHandler(UartHandle* handle);
 
 
 /**

@@ -391,12 +391,9 @@ void USART3_IRQHandler(void)              //串口3中断服务函数
 
 void UART4_IRQHandler(void)              //串口4中断服务函数
 {
-    /* IDLE中断处理 (接收完成) */
+    /* DMA + IDLE中断处理 */
     uartIdleIrqHandler(&uartUnionHandle);
-    
-    /* TC中断处理 (发送完成) */
-    uartTxCompleteHandler(&uartUnionHandle);
-}
+}	
 
 void UART5_IRQHandler(void)  //����5�жϷ������
 {

@@ -353,21 +353,15 @@ void USART1_IRQHandler(void)              //串口1中断服务函数
 
 void USART2_IRQHandler(void)              //串口2中断服务函数
 {
-    /* IDLE中断处理 (接收完成) */
+    /* DMA + IDLE中断处理 */
     uartIdleIrqHandler(&uartDisplayHandle);
-    
-    /* TC中断处理 (发送完成) */
-    uartTxCompleteHandler(&uartDisplayHandle);
 }
 
 
 void USART3_IRQHandler(void)              //串口3中断服务函数
 {
-    /* IDLE中断处理 (接收完成) */
+    /* DMA + IDLE中断处理 */
     uartIdleIrqHandler(&uartSlaveHandle);
-    
-    /* TC中断处理 (发送完成) */
-    uartTxCompleteHandler(&uartSlaveHandle);
     
     /* 处理错误标志 */
     if (USART_GetFlagStatus(USART3, USART_FLAG_ORE) == SET)
@@ -391,12 +385,9 @@ void USART3_IRQHandler(void)              //串口3中断服务函数
 
 void UART4_IRQHandler(void)              //串口4中断服务函数
 {
-    /* IDLE中断处理 (接收完成) */
+    /* DMA + IDLE中断处理 */
     uartIdleIrqHandler(&uartUnionHandle);
-    
-    /* TC中断处理 (发送完成) */
-    uartTxCompleteHandler(&uartUnionHandle);
-}
+}	
 
 void UART5_IRQHandler(void)  //����5�жϷ������
 {
