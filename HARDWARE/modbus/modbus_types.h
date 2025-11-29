@@ -141,6 +141,14 @@ typedef void (*ModbusMasterTimeoutFunc)(uint8_t slaveAddr);
 typedef void (*ModbusMasterOfflineFunc)(uint8_t slaveAddr);
 
 /**
+ * @brief 主机异常响应回调
+ * @param slaveAddr 从机地址
+ * @param funcCode 原始功能码 (不含0x80)
+ * @param exCode 异常码 (01-04)
+ */
+typedef void (*ModbusMasterExceptionFunc)(uint8_t slaveAddr, uint8_t funcCode, uint8_t exCode);
+
+/**
  * @brief 获取写入数据回调
  * @param slaveAddr 从机地址
  * @param regAddr 寄存器地址 (输出)
@@ -187,6 +195,7 @@ typedef struct {
     ModbusMasterRespFunc onResponse;          /* 响应接收回调 */
     ModbusMasterTimeoutFunc onTimeout;        /* 超时回调 */
     ModbusMasterOfflineFunc onOffline;        /* 离线回调 */
+    ModbusMasterExceptionFunc onException;    /* 异常响应回调 */
     ModbusGetWriteDataFunc getWriteData;      /* 获取写入数据 */
 } ModbusMasterCallback;
 
@@ -230,6 +239,7 @@ typedef struct {
     uint32_t rxCount;           /* 接收帧数 */
     uint32_t crcErrCount;       /* CRC错误数 */
     uint32_t timeoutCount;      /* 超时次数 */
+    uint32_t exceptionCount;    /* 异常响应次数 */
 } ModbusStats;
 
 /**

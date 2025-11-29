@@ -269,11 +269,23 @@ static void masterProcessResponse(ModbusHandle* handle)
     /* 获取从机索引 */
     idx = masterGetSlaveIndex(handle, slaveAddr);
     if (idx < MODBUS_MAX_SLAVES) {
-        /* 清除失败计数 */
+        /* 清除失败计数 - 收到任何响应都表示通信成功 */
         handle->masterCfg.writeCache[idx].failCount = 0;
     }
     
-    /* 回调通知 */
+    /* 检查是否为异常响应 (功能码最高位为1) */
+    if (funcCode & 0x80) {
+        uint8_t exCode = frame[2];
+        handle->stats.exceptionCount++;
+        
+        /* 异常响应回调 */
+        if (handle->masterCb.onException) {
+            handle->masterCb.onException(slaveAddr, funcCode & 0x7F, exCode);
+        }
+        return;
+    }
+    
+    /* 正常响应回调 */
     if (handle->masterCb.onResponse) {
         if (funcCode == MODBUS_FC_READ_HOLDING) {
             /* 03响应: 地址+功能码+长度+数据+CRC */

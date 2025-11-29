@@ -522,7 +522,6 @@ ModbusError modbusUart4Init(void)
     uart4MasterCb.onResponse = uart4OnResponse;
     uart4MasterCb.onTimeout = uart4OnTimeout;
     uart4MasterCb.onOffline = uart4OnOffline;
-    uart4MasterCb.onException = uart4OnException;
     uart4MasterCb.getWriteData = uart4GetWriteData;
     
     err = modbusConfigMaster(&modbusUart4, &uart4MasterCfg, &uart4MasterCb);
