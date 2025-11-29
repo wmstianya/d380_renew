@@ -77,6 +77,37 @@ int main(void)
 //***************串口3 DMA驱动 for 设备内部通信准备******//
 	uartSlaveInit(9600);    //DMA + IDLE中断模式
 
+#if UART_LOOPBACK_TEST_ENABLE
+	/* 回环测试初始化 - 测试USART2 (需要PA2-PA3短接) */
+	u1_printf("\n====== UART DMA Loopback Test ======\n");
+	u1_printf("Testing USART2, Count=%d, Size=%d\n", UART_TEST_COUNT, UART_TEST_PACKET_SIZE);
+	u1_printf("Please short PA2(TX) <-> PA3(RX)\n");
+	
+	/* 先用阻塞方式测试USART2是否能发送 */
+	{
+		uint8_t testData[] = {0xAA, 0x55, 0x01, 0x02, 0x03};
+		u1_printf("Blocking send test...\n");
+		uartSendBlocking(&uartDisplayHandle, testData, 5);
+		u1_printf("Blocking send done.\n");
+		SysTick_Delay_ms(100);
+		
+		/* 检查是否收到回环数据 */
+		if (uartIsRxReady(&uartDisplayHandle))
+		{
+			u1_printf("Loopback OK! Received data.\n");
+		}
+		else
+		{
+			u1_printf("No loopback data! Check PA2-PA3 connection.\n");
+		}
+		uartClearRxFlag(&uartDisplayHandle);
+	}
+	
+	u1_printf("Starting DMA loopback test...\n");
+	uartTestInit(&uartDisplayHandle);
+	uartTestStartLoopback(&uartDisplayHandle, UART_TEST_COUNT, UART_TEST_PACKET_SIZE);
+#endif
+
 //***************串口4 DMA驱动 for 联控或本地通信****//
 	uartUnionInit(9600);  //DMA + IDLE中断模式	 
 
@@ -164,6 +195,19 @@ int main(void)
 	
 	while(1)
 	{	
+#if UART_LOOPBACK_TEST_ENABLE
+		/* 回环测试处理 */
+		IWDG_Feed();
+		if (uartTestProcess())
+		{
+			/* 测试完成，打印结果 */
+			uartTestPrintResult();
+			u1_printf("\nTest completed! System halted.\n");
+			while(1) { IWDG_Feed(); }  /* 停止，查看结果 */
+		}
+		continue;  /* 测试模式下跳过正常业务 */
+#endif
+
 		Sys_Admin.Fan_Speed_Check = 0;
 		
 //***********副系统SPI 炉内温度读取***********************//

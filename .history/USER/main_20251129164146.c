@@ -164,6 +164,19 @@ int main(void)
 	
 	while(1)
 	{	
+#if UART_LOOPBACK_TEST_ENABLE
+		/* 回环测试处理 */
+		IWDG_Feed();
+		if (uartTestProcess())
+		{
+			/* 测试完成，打印结果 */
+			uartTestPrintResult();
+			u1_printf("\nTest completed! System halted.\n");
+			while(1) { IWDG_Feed(); }  /* 停止，查看结果 */
+		}
+		continue;  /* 测试模式下跳过正常业务 */
+#endif
+
 		Sys_Admin.Fan_Speed_Check = 0;
 		
 //***********副系统SPI 炉内温度读取***********************//

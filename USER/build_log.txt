@@ -1,6 +1,6 @@
 Build target 'Target 1'
 compiling main.c...
-main.c(66): warning:  #223-D: function "IO_Interrupt_Config" declared implicitly
+main.c(60): warning:  #223-D: function "IO_Interrupt_Config" declared implicitly
         IO_Interrupt_Config();
 main.c: 1 warning, 0 errors
 linking...
